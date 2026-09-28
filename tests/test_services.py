@@ -29,7 +29,7 @@ class ServiceTests(unittest.TestCase):
             q=Outbox(Path(root)/'db');now=datetime.now(timezone.utc);q.add('A','CARD',now)
             with self.assertRaises(ApiError):q.add('A','CARD',now+timedelta(seconds=2))
             q.add('A','CARD',now+timedelta(seconds=12));self.assertEqual(len(q.rows('A')),2)
-    def test_backup_retention_and_invalid_response(self):
+    def test_backup_retention(self):
         with tempfile.TemporaryDirectory() as root:
             class API:
                 def rpc(self,*a):return {'format':'SMPCS operational backup v1','members':[]}

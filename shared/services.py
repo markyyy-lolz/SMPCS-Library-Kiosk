@@ -1,5 +1,6 @@
 """Account RPCs, durable attendance outbox and operational backups."""
 import json
+from contextlib import contextmanager
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -25,7 +26,12 @@ class Outbox:
     def __init__(self,path=None):
         self.path=Path(path or APP_DIR/'attendance_outbox.sqlite3'); self.path.parent.mkdir(parents=True,exist_ok=True)
         with self.connect() as db:db.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, station TEXT NOT NULL, rfid TEXT NOT NULL, scanned_at TEXT NOT NULL, error TEXT)')
-    def connect(self):return sqlite3.connect(self.path,timeout=20)
+    @contextmanager
+    def connect(self):
+        db=sqlite3.connect(self.path,timeout=20)
+        try:
+            with db:yield db
+        finally:db.close()
     def add(self,code,rfid,now=None):
         stamp=(now or datetime.now(timezone.utc)).isoformat(); event={'id':str(uuid.uuid4()),'rfid':rfid,'scanned_at':stamp}
         with self.connect() as db:
@@ -55,7 +61,7 @@ def save_backup(api,user,directory=None):
     folder=Path(directory or APP_DIR/'backups');folder.mkdir(parents=True,exist_ok=True)
     data=account(api,user,'backup')
     if not isinstance(data,dict) or data.get('format')!='SMPCS operational backup v1':raise ApiError('Invalid backup response')
-    name='library-'+datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f')+'.json'
+    name='library-'+datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f')+'-'+uuid.uuid4().hex[:12]+'.json'
     path=folder/name;tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8');tmp.replace(path)
     for old in sorted(folder.glob('library-*.json'))[:-7]:old.unlink()
     return str(path)
