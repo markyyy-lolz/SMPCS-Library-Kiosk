@@ -47,7 +47,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch.object(updates, 'SETTINGS', Path(folder)/'updates.json'):
                 updates.write_settings('school/library', False)
-                self.assertEqual(updates.read_settings(), {'repository':'school/library', 'enabled':False})
+                self.assertEqual(updates.read_settings(), {'repository':'school/library', 'enabled':False, 'auto_download':True})
                 with self.assertRaises(ValueError): updates.write_settings('bad-url', True)
                 self.assertFalse(updates.read_settings()['enabled'])
 

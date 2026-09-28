@@ -31,6 +31,8 @@ jobs:
         run: python scripts/package_release.py
       - name: Build and test Windows executable
         run: python scripts/build_windows.py
+      - name: Test real EXE update and rollback primitives
+        run: python scripts/test_windows_update.py
       - name: Scan release with Microsoft Defender when available
         shell: pwsh
         run: ./scripts/scan_release.ps1
@@ -51,4 +53,4 @@ jobs:
           fi
           gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt \
             --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION — Windows EXE" \
-            --notes "Download the Windows ZIP, extract the entire folder, and open SMPCS_Library.exe. Keep the _internal folder beside it. Non-self-extracting build with UPX disabled. See SCAN_REPORT.txt for the actual build scan status. This is unsigned and no antivirus compatibility guarantee is made. No Python installation required. Choose Go to Kiosk or Go to Admin. Kiosk settings require staff sign-in. Original kiosk layout restored with a blue theme. Includes readable light dialogs, attendance history filters and CSV export. GitHub update checks are preconfigured. Windows 10/11 x64. Source ZIP is optional for developers."
+            --notes "Download the Windows ZIP, extract the entire folder, and open SMPCS_Library.exe. Keep the _internal folder beside it. Non-self-extracting build with UPX disabled. See SCAN_REPORT.txt for the actual build scan status. This is unsigned and no antivirus compatibility guarantee is made. No Python installation required. Choose Go to Kiosk or Go to Admin. Kiosk settings require staff sign-in. Automatic background downloads and Restart & Update are now built in, with checksum verification and rollback. Install this version once to enable future in-app updates. Original kiosk layout restored with a blue theme. Includes readable light dialogs, attendance history filters and CSV export. GitHub update checks are preconfigured. Windows 10/11 x64. Source ZIP is optional for developers."

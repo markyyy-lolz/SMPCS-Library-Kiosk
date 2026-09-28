@@ -12,6 +12,9 @@ role = sys.argv[1] if len(sys.argv) > 1 else 'chooser'
 try:
     from shared.runtime import configure
     configure(role if role in ('admin', 'kiosk', 'updates') else 'launcher')
+    if role == '--apply-update':
+        from shared.installer import apply_request
+        sys.exit(apply_request(sys.argv[2]))
     from PyQt6.QtWidgets import QApplication
     app = QApplication(sys.argv)
     app.setStyle('Fusion')

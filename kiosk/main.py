@@ -2362,7 +2362,7 @@ class Kiosk(QMainWindow):
             return
         from admin.main import AdminLogin
         from shared.updates import VERSION
-        self.busy=True
+        self.busy=True; self._settings_open=True
         self.rfid.timer.stop(); self.rfid.buffer=""
         QApplication.instance().removeEventFilter(self.rfid)
         try:
@@ -2400,7 +2400,8 @@ class Kiosk(QMainWindow):
         finally:
             self.rfid.buffer=""; self.rfid.timer.stop()
             QApplication.instance().installEventFilter(self.rfid)
-            self.busy=False; self.reset(); self.verify_station()
+            self.busy=False; self._settings_open=False
+            if not getattr(self,"_update_requested",False): self.reset(); self.verify_station()
 
     def update_clock(self):
         now=datetime.now(); self.clock.setText(now.strftime("%I:%M:%S %p")); self.date_label.setText(now.strftime("%A, %B %d, %Y"))

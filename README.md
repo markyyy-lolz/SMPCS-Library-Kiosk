@@ -1,37 +1,30 @@
-# Windows release 1.3.2
-
-Download **SMPCS_Library_Windows_v1.3.2.zip** from GitHub Releases. Extract the entire ZIP and open **SMPCS_Library.exe** inside. Keep the `_internal` folder beside the EXE. No Python installation is needed.
-
-The new package uses an application folder instead of extracting bundled executable files into a temporary folder on every launch. UPX is disabled. This may reduce packaging-related false positives but does not establish the cause of a reported detection. The build remains unsigned. Keep antivirus enabled and read `SCAN_REPORT.txt` for the actual scan outcome. If it is still blocked, provide the antivirus product and exact detection name for investigation.
-
 # SMPCS Library Kiosk
 
-RFID library attendance, book borrowing and returns, with separate admin and kiosk apps for St. Martin de Porres Catholic School.
+Blue-themed RFID library kiosk and staff administration for SMPCS.
 
-## Run on Windows 10/11 (64-bit)
-Download **SMPCS_Library.exe** from [Releases](https://github.com/markyyy-lolz/SMPCS-Library-Kiosk/releases/latest), then double-click it. Choose **Go to Kiosk** or **Go to Admin**. No Python installation or BAT file is required. Complete the existing database/station setup if this PC has not been configured before.
+## First installation on Windows 10/11 x64
+Download the **Windows ZIP** from [Releases](https://github.com/markyyy-lolz/SMPCS-Library-Kiosk/releases/latest), extract the entire folder, and open **SMPCS_Library.exe**. Keep `_internal` beside the executable. No Python installation is needed.
 
-The app checks this repository for stable releases at startup and every six hours. The admin Updates menu also supports manual checks. Checks notify only; download and install updates manually after closing both apps.
+Choose **Go to Kiosk** or **Go to Admin**. Existing database and station settings are reused from your Windows profile. New PCs complete the setup screen.
 
-## Development and releases
-Run `python -m unittest discover -s tests -v`.
-Push a new numeric `VERSION` in `shared/updates.py` to `main` to publish the next release. GitHub Actions tests the code, packages an explicit list of application files, and publishes a ZIP with a SHA-256 checksum. Existing release versions are not overwritten. The workflow can also be run from the Actions tab.
+## Updates from version 1.4.0 onward
+The app checks at startup and every six hours. New Windows packages download in the background and are verified against the release's SHA-256 checksum. Open **Updates** (or **Kiosk Settings → GitHub updates**) and click **Restart & Update**. No GitHub page, manual extraction, or file copying is needed for later releases.
 
-Do not commit `.env`, credentials, local configuration, or student records. `.env.example` contains blank placeholders only. Database schema is in `SMPCS_LIBRARY_FULL_DATABASE.sql`.
+The helper waits for open copies of this installation to close, backs up the old application folder, replaces the files, tests the new build, then reopens the chooser. A failed startup test triggers rollback. Database credentials/settings remain in your Windows profile; portable `.env`/configuration files are preserved too. Backups remain in a sibling `.previous-*` folder. The installation folder and its parent must be writable; the app does not elevate privileges. Finish active transactions before restarting.
 
-The release includes a standalone Windows EXE plus an optional source ZIP. The EXE is built and smoke-tested on Windows, including both setup screens and bundled assets. Live RFID/database/printing tests must be performed on the deployment PC.
+Older versions cannot install this updater themselves: install **1.4.0 once** using the ZIP. Thereafter use in-app updates. Source Python runs continue to support checks; in-app installation is for the Windows EXE distribution.
 
-## Kiosk settings
-Use the **Settings** button at the bottom of the kiosk. Sign in with your existing librarian/admin account to change full-screen mode, animations, GitHub update settings, or the station connection. Settings are available between transactions; RFID capture is paused while the settings dialogs are open and restored afterward.
+## Features
+- Original kiosk layout with blue styling, registration, attendance, borrowing/returns and USB printing.
+- Staff-protected kiosk settings, full-screen and animation controls.
+- Admin attendance history with date/action/search filters and CSV export.
+- Page refresh, export visible tables and overdue-loan shortcuts.
+- Windowless application and rotating logs in `%APPDATA%\SMPCS_Library\logs`.
 
-## New in 1.3.0
-- Consistent light theme for kiosk, admin, setup and update dialogs, even when Windows uses dark mode.
-- Redesigned kiosk home with four large service cards and a visible registration entry.
-- Light admin navigation and scrollable pages for smaller screens.
-- Attendance history with Philippine date boundaries, IN/OUT filters, search and CSV export (up to 10,000 records per date range).
-- Page refresh, export-visible-table and overdue-loan shortcuts. CSV exports preserve visible filters and neutralize spreadsheet formulas.
+## Release integrity
+The Windows app uses a normal folder bundle with UPX disabled. The release includes `SHA256SUMS.txt`, `SCAN_REPORT.txt` and build dependency versions. The application is unsigned. A checksum verifies downloaded bytes against the selected GitHub release; it is not a publisher signature. Keep antivirus enabled.
 
-Attendance uses the existing `library_attendance` and `library_members` tables; no schema migration is required.
+## Development
+Install `requirements.txt`, then run `python -m unittest discover -s tests -v`. Run `launch.pyw` for the chooser. Build on Windows using `requirements-build.txt` and `scripts/build_windows.py`. GitHub Actions runs tests, builds the EXE, tests the actual update helper on a disposable installation, records Defender scan status and publishes a release when `VERSION` in `shared/updates.py` changes.
 
-## Version 1.3.2
-Restores the original kiosk home layout: welcome/reader panel on the left, vertically stacked services and Register Here on the right. Uses the blue theme and readable light dialogs. Update checks, staff settings, attendance reports, and the non-self-extracting Windows package are retained.
+Never commit `.env`, local credentials or student data.
