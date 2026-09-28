@@ -6,6 +6,8 @@ on:
       - 'shared/updates.py'
       - 'shared/installer.py'
       - 'tests/**'
+      - 'migrations/**'
+      - 'scripts/test_database.py'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 permissions:
@@ -14,7 +16,32 @@ concurrency:
   group: smpcs-release
   cancel-in-progress: false
 jobs:
+  database-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: library_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'psycopg[binary]>=3,<4'
+      - name: Verify database permissions and workflows
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:test-only@localhost:5432/library_test
+        run: python scripts/test_database.py
   release:
+    needs: database-tests
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -53,6 +80,6 @@ jobs:
             echo "Release v$VERSION already exists; nothing overwritten."
             exit 0
           fi
-          gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt \
+          gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt dist/002_accounts_services.sql \
             --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION — Windows EXE" \
-            --notes "Download the Windows ZIP, extract the entire folder, and open SMPCS_Library.exe. Keep the _internal folder beside it. Non-self-extracting build with UPX disabled. See SCAN_REPORT.txt for the actual build scan status. This is unsigned and no antivirus compatibility guarantee is made. No Python installation required. Choose Go to Kiosk or Go to Admin. Kiosk settings require staff sign-in. Automatic background downloads and Restart & Update are now built in, with checksum verification and rollback. Install this version once to enable future in-app updates. Original kiosk layout restored with a blue theme. Includes readable light dialogs, attendance history filters and CSV export. GitHub update checks are preconfigured. Windows 10/11 x64. Source ZIP is optional for developers."
+            --notes "Download the Windows ZIP, extract the entire folder, and open SMPCS_Library.exe. Keep the _internal folder beside it. Non-self-extracting build with UPX disabled. See SCAN_REPORT.txt for the actual build scan status. This is unsigned and no antivirus compatibility guarantee is made. No Python installation required. Choose Go to Kiosk or Go to Admin. Kiosk settings require staff sign-in. Automatic background downloads and Restart & Update are now built in, with checksum verification and rollback. Install this version once to enable future in-app updates. New: My Account with RFID and PIN, staff account management, member activation and PIN reset, return approvals, offline attendance queue and daily operational backups. Apply the included migrations/002_accounts_services.sql once in Supabase SQL Editor before using new services. Original blue kiosk layout retained. Includes readable light dialogs, attendance history filters and CSV export. GitHub update checks are preconfigured. Windows 10/11 x64. Source ZIP is optional for developers."

@@ -2269,7 +2269,7 @@ class KioskSetup(QDialog):
 class Kiosk(QMainWindow):
     def __init__(self,api,cfg):
         super().__init__(); self.api=api; self.cfg=cfg; self.member=None; self.mode="member"; self.online=False; self.manual=None; self.pending_action=None
-        self.scan_panel=None; self.busy=False; self._verifying_station=False; self._api_lock=threading.Lock(); self._result_shown_at=0.0
+        self.scan_panel=None; self.busy=False; self._syncing=False; self._verifying_station=False; self._api_lock=threading.Lock(); self._result_shown_at=0.0
         self._reset_timer=QTimer(self); self._reset_timer.setSingleShot(True); self._reset_timer.timeout.connect(self.reset)
         self.setWindowTitle("SMPCS Library Kiosk"); self.showFullScreen()
         self.setStyleSheet(f"QMainWindow{{background:{BACKGROUND};}} QWidget{{font-family:'Segoe UI';color:{TEXT};}} QLabel{{background:transparent;}}")
@@ -2281,6 +2281,8 @@ class Kiosk(QMainWindow):
         self.content_container=QWidget(); self.content_container.setObjectName("kioskContent"); self.content_container.setStyleSheet(f"background:{BACKGROUND};border:none;"); self.content_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         self.content_layout=QVBoxLayout(self.content_container); self.content_layout.setContentsMargins(0,0,0,0); self.body_layout.addWidget(self.content_container,1)
         self.build_status_bar()
+        from shared.services import Outbox
+        self.outbox=Outbox()
         self.clock_timer=QTimer(self); self.clock_timer.timeout.connect(self.update_clock); self.clock_timer.start(1000); self.update_clock()
         self.heartbeat=QTimer(self); self.heartbeat.timeout.connect(self.heartbeat_fn); self.heartbeat.start(30000)
         self.rfid=RFIDCapture(self); self.rfid.tag.connect(self.handle_rfid)
@@ -2374,6 +2376,8 @@ class Kiosk(QMainWindow):
             layout=QVBoxLayout(dialog); layout.setContentsMargins(26,26,26,26); layout.setSpacing(15)
             layout.addWidget(QLabel(f"SMPCS Library • Version {VERSION}"))
             layout.addWidget(QLabel("Station: "+self.cfg.get("STATION_NAME","Library Kiosk")))
+            from shared.account_ui import outbox_dialog
+            queue_button=QPushButton("Attendance sync queue"); queue_button.clicked.connect(lambda:outbox_dialog(self)); layout.addWidget(queue_button)
             fullscreen=QCheckBox("Full-screen kiosk"); fullscreen.setChecked(self.isFullScreen()); layout.addWidget(fullscreen)
             motion=QCheckBox("Enable animations"); motion.setChecked(MOTION_ENABLED); layout.addWidget(motion)
             def updates():
@@ -2444,6 +2448,7 @@ class Kiosk(QMainWindow):
         right=QVBoxLayout(); right.setSpacing(11)
         status=QFrame(); status.setFixedHeight(110); status.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:18px;}}"); sl=QVBoxLayout(status); sl.setContentsMargins(16,13,16,12)
         a=QLabel("LIBRARY STATUS"); a.setStyleSheet(f"color:{MUTED};font-size:9px;font-weight:950;letter-spacing:1.1px;"); b=QLabel("READY"); b.setStyleSheet(f"color:{BANNER_2};font-size:26px;font-weight:950;"); c=QLabel("Kiosk service is available"); c.setStyleSheet(f"color:{TEXT};font-size:10px;font-weight:750;"); line=QFrame(); line.setFixedHeight(4); line.setStyleSheet(f"background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {BANNER_2},stop:.6 {BANNER_1},stop:1 #7FB9F1);border:none;border-radius:2px;"); sl.addWidget(a); sl.addWidget(b); sl.addWidget(c); sl.addSpacing(5); sl.addWidget(line); right.addWidget(status)
+        account_btn=QPushButton("MY ACCOUNT  •  RFID + PIN"); account_btn.setMinimumHeight(42); account_btn.clicked.connect(lambda:self.find_member_from_home("account")); left.addWidget(account_btn)
         btn_borrow=self.home_action_button("BORROW A BOOK","Scan your ID  •  scan the book",BANNER_2,self.borrow_from_home,"📖")
         btn_return=self.home_action_button("RETURN A BOOK","Scan your ID  •  scan the book",SECONDARY,self.return_from_home,"↩")
         btn_attend=self.home_action_button("ATTENDANCE","Time in  •  time out",SUCCESS,self.attendance_from_home,"✓")
@@ -2565,7 +2570,7 @@ class Kiosk(QMainWindow):
     def find_member_from_home(self,action):
         self.mode="member"; self.pending_action=action
         if self.scan_panel is not None:
-            info={"borrow":("BORROW A BOOK",BANNER_2),"return":("RETURN A BOOK",SECONDARY),"attendance":("ATTENDANCE",SUCCESS),"print":("PRINT A FILE",GOLD)}
+            info={"borrow":("BORROW A BOOK",BANNER_2),"return":("RETURN A BOOK",SECONDARY),"attendance":("ATTENDANCE",SUCCESS),"print":("PRINT A FILE",GOLD),"account":("MY ACCOUNT",BANNER_2)}
             name,color=info[action]
             self.scan_panel.set_message("TAP YOUR SCHOOL ID",f"{name} selected. Tap your school ID on the reader to continue.","Your account will be identified automatically.",eyebrow=f"STEP 1  •  IDENTIFY  •  {name}",accent=color)
 
@@ -2586,7 +2591,15 @@ class Kiosk(QMainWindow):
     def _station_fail(self,_e):
         self._verifying_station=False; self.online=False; self.set_online(False,"OFFLINE • Station not verified")
 
-    def heartbeat_fn(self): self.verify_station()
+    def heartbeat_fn(self):
+        self.verify_station()
+        if self.online and not self.busy and not self._syncing:
+            self._syncing=True
+            def done(result):
+                self._syncing=False
+                if result['pending']:self.status.setText(f"{result['pending']} attendance scan(s) pending sync / review")
+            def fail(exc):self._syncing=False
+            self.run_async(lambda:self.outbox.sync(self.api,self.cfg),done,fail)
 
     def set_online(self,online,text):
         self.status.setText(text); self.status_dot.setStyleSheet(f"color:{SUCCESS if online else DANGER};font-size:13px;background:transparent;")
@@ -2608,6 +2621,8 @@ class Kiosk(QMainWindow):
 
     def start_rfid_verification(self,uid):
         action=self.pending_action
+        if action=='attendance':
+            self.record_attendance_uid(uid);return
         accent={"borrow":BANNER_2,"return":SECONDARY,"attendance":SUCCESS,"print":GOLD}.get(action,BANNER_2)
         self.run_with_processing(
             "VERIFYING YOUR SCHOOL ID","Reading your card",
@@ -2628,6 +2643,7 @@ class Kiosk(QMainWindow):
             if cnt is None:
                 try: member["_loan_count"]=len(self.api.select("library_loans",f"?select=id&member_id=eq.{member['id']}&status=eq.borrowed") or [])
                 except Exception: member["_loan_count"]=None
+        member['rfid_uid']=uid
         return member
 
     def _member_found(self,member):
@@ -2637,6 +2653,9 @@ class Kiosk(QMainWindow):
         elif action=="return": self.return_start()
         elif action=="attendance": self.attendance()
         elif action=="print": self.print_start()
+        elif action=="account":
+            from shared.account_ui import kiosk_account
+            kiosk_account(self)
         else: self.show_member()
 
     def _member_failed(self,exc):
@@ -2685,36 +2704,29 @@ class Kiosk(QMainWindow):
     # ========================================================
     # ATTENDANCE
     # ========================================================
-    def _attendance_job(self,member):
-        station=self.cfg["STATION_CODE"]
-        rows=self.api.select("library_attendance","?select=action,scanned_at"+f"&member_id=eq.{member['id']}&order=scanned_at.desc&limit=30") or []
-        today=datetime.now().astimezone().date(); latest=None
-        for r in rows:
-            stamp=r.get("scanned_at")
-            if not stamp: continue
-            try:
-                dt=datetime.fromisoformat(str(stamp).replace("Z","+00:00")); dt=dt.astimezone() if dt.tzinfo else dt
-                if dt.date()==today: latest=str(r.get("action","")).upper(); break
-            except Exception: continue
-        action="OUT" if latest=="IN" else "IN"
-        try:
-            self.api.rpc("library_attendance_scan",{"p_member_id":member["id"],"p_action":action,"p_station":station})
-        except Exception as exc:
-            if action=="OUT" and "MUST_TIME_IN_FIRST" in str(exc).upper():
-                action="IN"; self.api.rpc("library_attendance_scan",{"p_member_id":member["id"],"p_action":"IN","p_station":station})
-            else: raise
-        return action
+    def record_attendance_uid(self,uid):
+        from shared.services import station
+        from shared.api import NetworkError
+        import uuid
+        from datetime import timezone
+        event={'id':str(uuid.uuid4()),'rfid':uid,'scanned_at':datetime.now(timezone.utc).isoformat()}
+        def job():
+            # Persist first: a lost response must retry the identical id, not create a second scan.
+            event=self.outbox.add(self.cfg['STATION_CODE'],uid)
+            result=self.outbox.sync(self.api,self.cfg)
+            rows=self.outbox.rows(self.cfg['STATION_CODE'])
+            own=next((r for r in rows if r['id']==event['id']),None)
+            if own and own.get('error'):raise ApiError(own['error'])
+            return {'pending':own is not None,'count':result['pending']}
+        self.run_with_processing('RECORDING ATTENDANCE','Saving your card scan',
+            ['Saving scan on this computer','Syncing with the library'],fn=job,
+            on_ok=lambda result:self.show_result('SAVED OFFLINE' if result['pending'] else 'ATTENDANCE RECORDED','Card scan saved',
+            'PENDING SYNC' if result['pending'] else 'SYNCED',
+            'Awaiting server verification. Do not tap again. Keep this PC available to sync.' if result['pending'] else 'Your time in / out was recorded. Duplicate taps within 10 seconds are ignored.',SUCCESS,'✓',4500),
+            on_err=lambda exc:self.show_error('ATTENDANCE NEEDS REVIEW',str(exc)),accent=SUCCESS,icon='card',min_ms=1600,step_ms=600)
 
     def attendance(self):
-        if not self.member or self.busy: return
-        member=self.member
-        self.run_with_processing(
-            "RECORDING YOUR ATTENDANCE","Saving your attendance",
-            ["Checking today's attendance","Deciding time in or time out","Saving your attendance record"],
-            fn=lambda:self._attendance_job(member),
-            on_ok=lambda action:self.show_result("TIME IN" if action=="IN" else "TIME OUT",member.get("full_name","Member"),"ATTENDANCE RECORDED","Your attendance has been recorded.",SUCCESS,"✓",4200),
-            on_err=lambda exc:self.show_error("ATTENDANCE ERROR",str(exc)),
-            accent=SUCCESS,icon="card",min_ms=1600,step_ms=600)
+        if self.member and not self.busy:self.record_attendance_uid(self.member.get('rfid_uid',''))
 
     # ========================================================
     # BOOK WORKFLOW
@@ -2808,7 +2820,8 @@ class Kiosk(QMainWindow):
         if not books: raise ApiError("Book RFID is not registered.")
         book=books[0] if isinstance(books,list) else books; loan=next((x for x in loans if x.get("book_id")==book.get("id")),None)
         if not loan: raise ApiError("This book is not currently borrowed by this member.")
-        self.api.rpc("library_return",{"p_loan_id":loan["id"],"p_actor":self.cfg["STATION_CODE"]})
+        from shared.services import station
+        station(self.api,self.cfg,"return_request",{"loan_id":loan["id"],"rfid":member.get("rfid_uid","")})
         return book
 
     def find_book_return(self,uid):
@@ -2816,9 +2829,9 @@ class Kiosk(QMainWindow):
         member=self.member
         self.run_with_processing(
             "VERIFYING YOUR BOOK RETURN","Checking your return",
-            ["Reading the book tag","Finding your borrowed book","Recording the return","Updating the library records"],
+            ["Reading the book tag","Finding your borrowed book","Sending return request","Waiting for librarian confirmation"],
             fn=lambda:self._return_job(member,uid),
-            on_ok=lambda book:self.show_result("RETURNED",book.get("title","Book"),"RETURN RECORDED","The book return has been recorded.",SUCCESS,"✓",4500),
+            on_ok=lambda book:self.show_result("RETURN REQUESTED",book.get("title","Book"),"LIBRARIAN CONFIRMATION REQUIRED","Please hand the book to the librarian. It remains on loan until approved.",SUCCESS,"✓",4500),
             on_err=lambda exc:self.show_error("RETURN FAILED",str(exc)),
             accent=SECONDARY,icon="book",min_ms=2400,step_ms=700)
 

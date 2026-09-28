@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import shutil
 import zipfile
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -33,6 +34,9 @@ sys.path.insert(0,str(ROOT))
 from shared.updates import VERSION
 app_folder=exe.parent
 (app_folder/'READ_ME.txt').write_text('Extract the whole ZIP, then open SMPCS_Library.exe. Keep the _internal folder beside the EXE. No Python installation is needed. This build is unsigned; keep antivirus enabled. Settings are stored in your Windows profile.\n')
+shutil.copytree(ROOT/'migrations',app_folder/'migrations',dirs_exist_ok=True)
+shutil.copy2(ROOT/'START_HERE.md',app_folder/'START_HERE.md')
+shutil.copy2(ROOT/'migrations/002_accounts_services.sql',ROOT/'dist/002_accounts_services.sql')
 archive=ROOT/f'dist/SMPCS_Library_Windows_v{VERSION}.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as package:
     for path in sorted(app_folder.rglob('*')):

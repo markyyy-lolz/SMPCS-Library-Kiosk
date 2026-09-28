@@ -15,6 +15,7 @@ files = ['README.md', 'START_HERE.md', '.env.example', 'requirements.txt',
          'update_settings.json', 'SMPCS_LIBRARY_FULL_DATABASE.sql', 'assets/school_logo.png']
 for folder in ('admin', 'kiosk', 'shared', 'tests'):
     files += [str(p.relative_to(ROOT)).replace('\\', '/') for p in (ROOT/folder).rglob('*.py')]
+files += [str(p.relative_to(ROOT)).replace('\\','/') for p in (ROOT/'migrations').glob('*.sql')]
 output = ROOT/'dist'
 output.mkdir(exist_ok=True)
 archive = output/f'SMPCS_Library_v{VERSION}.zip'

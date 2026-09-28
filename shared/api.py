@@ -5,6 +5,9 @@ from typing import Any
 class ApiError(RuntimeError):
     pass
 
+class NetworkError(ApiError):
+    pass
+
 class SupabaseAPI:
     def __init__(self, url: str, key: str, timeout: int = 12):
         self.url = (url or "").rstrip("/")
@@ -26,7 +29,7 @@ class SupabaseAPI:
                 method, f"{self.url}{path}", timeout=self.timeout, **kwargs
             )
         except requests.RequestException as e:
-            raise ApiError(f"Network error: {e}") from e
+            raise NetworkError(f"Network error: {e}") from e
 
         if not r.ok:
             detail = r.text[:1000]

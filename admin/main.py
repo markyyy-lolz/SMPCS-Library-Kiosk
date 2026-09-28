@@ -1198,13 +1198,16 @@ class AdminLogin(QDialog):
         self.btn.setText("SIGNING IN…")
         QApplication.processEvents()
         try:
-            rows = self.api.rpc("library_login", {"p_username": self.u.text().strip()})
-            if not rows:
-                raise ApiError("Invalid username or password.")
-            user = rows if isinstance(rows, dict) else rows[0]
-            if not bcrypt.checkpw(self.p.text().encode(), user["password_hash"].encode()):
-                raise ApiError("Invalid username or password.")
-            self.user = user
+            from shared.services import login
+            try:
+                self.user = login(self.api,'staff',self.u.text().strip(),self.p.text())
+            except ApiError as exc:
+                if 'PGRST202' not in str(exc) and 'Could not find the function' not in str(exc):raise
+                rows=self.api.rpc('library_login',{'p_username':self.u.text().strip()})
+                user=rows if isinstance(rows,dict) else rows[0]
+                if not bcrypt.checkpw(self.p.text().encode(),user['password_hash'].encode()):raise ApiError('Invalid username or password.')
+                user.pop('password_hash',None);self.user=user
+            self.p.clear()
             self.accept()
         except Exception as e:  # noqa: BLE001
             self.err.setText(str(e))
@@ -1297,6 +1300,7 @@ NAV_ITEMS = [
     ("dashboard", "Dashboard", "🏠"),
     ("approvals", "Borrow Approvals", "✅"),
     ("members", "Members", "👥"),
+    ("accounts", "Accounts & Services", "⚙"),
     ("books", "Books", "📚"),
     ("analytics", "Book Analytics", "📊"),
     ("loans", "Loans", "🔄"),
@@ -1306,6 +1310,7 @@ NAV_ITEMS = [
     ("logs", "Audit / Logs", "🧾"),
 ]
 PAGE_META = {
+    "accounts": ("Accounts & Services", "Manage access, confirm returns and back up library records."),
     "attendance": ("Attendance history", "Search RFID visits, filter dates and export attendance records."),
     "dashboard": ("Library Dashboard", "A quick look at your library right now."),
     "approvals": ("Borrow Approvals", "Students who borrowed at the kiosk need your OK before they leave with the book."),
@@ -1364,7 +1369,7 @@ class AdminWindow(QMainWindow, AdminFeatures):
         self.pages = {}
         self._refreshers = {}
         self.build_dashboard(); self.build_members(); self.build_books(); self.build_analytics()
-        self.build_loans(); self.build_approvals(); self.build_stations(); self.build_print_logs(); self.build_logs(); self.build_attendance()
+        self.build_loans(); self.build_approvals(); self.build_stations(); self.build_print_logs(); self.build_logs(); self.build_attendance(); self.build_accounts()
         self._clock_timer = QTimer(self)
         self._clock_timer.timeout.connect(self._tick_clock)
         self._clock_timer.start(1000)
@@ -1466,9 +1471,14 @@ class AdminWindow(QMainWindow, AdminFeatures):
         out.setCursor(Qt.CursorShape.PointingHandCursor)
         out.setStyleSheet("QPushButton{background:rgba(229,72,77,46);color:#A02535;border:none;border-radius:14px;font-size:13px;font-weight:900;}"
                           "QPushButton:hover{background:#E5484D;color:#172B46;}")
-        out.clicked.connect(lambda _=False: self.close())
+        out.clicked.connect(self.sign_out)
         lay.addWidget(out)
         return side
+
+    def sign_out(self):
+        from shared.services import account
+        if not self.user.get('token'):self.close();return
+        self.load(lambda:account(self.api,self.user,'logout'),lambda _:self.close(),lambda _:self.close())
 
     def add_page(self, name, widget, refresh):
         scroll=QScrollArea(); scroll.setWidgetResizable(True); scroll.setWidget(widget)
@@ -1575,7 +1585,7 @@ class AdminWindow(QMainWindow, AdminFeatures):
         self.mno, self.mrfid, self.mname = QLineEdit(), QLineEdit(), QLineEdit()
         self.mgrade, self.msection = QLineEdit(), QLineEdit()
         self.mtype = QComboBox()
-        self.mtype.addItems(["student", "teacher", "staff", "other"])
+        self.mtype.addItems(["student", "employee", "guest", "teacher", "staff", "other"])
         self.mno.setPlaceholderText("e.g. 2024-0001")
         self.mrfid.setPlaceholderText("Tap the card or type the UID")
         self.mname.setPlaceholderText("Complete name")
@@ -1592,6 +1602,8 @@ class AdminWindow(QMainWindow, AdminFeatures):
         form.lay.addLayout(grid)
         btns = QHBoxLayout()
         btns.addWidget(make_button("💾  Save member", self.save_member))
+        from shared.account_ui import member_access
+        btns.addWidget(make_button("Account access / PIN",lambda:member_access(self),"secondary"))
         btns.addWidget(make_button("Clear form", self.clear_member_form, "secondary"))
         btns.addStretch()
         form.lay.addLayout(btns)
@@ -1615,7 +1627,7 @@ class AdminWindow(QMainWindow, AdminFeatures):
                                      ("active", lambda v, r: "● Active" if v else "○ Inactive")],
                  lambda row, c: (SUCCESS if row.get("active") else MUTED_LIGHT) if c == 6 else None)
             filter_table(self.mtable, self.msearch.text())
-        self.load(lambda: select_all(self.api, "library_members", "member_no,rfid_uid,full_name,member_type,grade_level,section,active", "&order=full_name"),
+        self.load(lambda: select_all(self.api, "library_members", "id,member_no,rfid_uid,full_name,member_type,grade_level,section,active", "&order=full_name"),
                   ok, lambda e: msg(self, "Members", str(e), "error"))
 
     def member_selected(self):
@@ -1656,9 +1668,34 @@ class AdminWindow(QMainWindow, AdminFeatures):
         def ok(_):
             self.toast.show_message("Member saved ✓")
             self.refresh_members()
-        self.load(lambda: self.api.rpc("library_save_member", payload), ok, lambda e: msg(self, "Save failed", str(e), "error"))
+        from shared.services import account
+        data={k.removeprefix("p_"):v for k,v in payload.items()}
+        self.load(lambda: account(self.api,self.user,"member_save",data), ok, lambda e: msg(self, "Save failed", str(e), "error"))
 
     # ---------------------------------------------------------------- books
+    def build_accounts(self):
+        from shared.account_ui import staff_accounts,return_requests,backup_dialog,member_access
+        page=QWidget();lay=QVBoxLayout(page)
+        for text,fn in [('Staff accounts',lambda:staff_accounts(self)),('Member access / PIN',lambda:(self.show_page('members'),member_access(self))),('Pending book returns',lambda:return_requests(self)),('Backups',lambda:backup_dialog(self))]:
+            b=make_button(text,fn,height=52);lay.addWidget(b)
+            if text in ('Staff accounts','Backups'):b.setEnabled(self.user.get('role')=='admin')
+        self.backup_status=QLabel('');self.backup_status.setWordWrap(True);lay.addWidget(self.backup_status);lay.addStretch()
+        if not self.user.get('token'):self.backup_status.setText('New services need the v1.5 database migration: migrations/002_accounts_services.sql. Existing pages remain available.')
+        self.add_page('accounts',page,lambda:None)
+        self.backup_timer=QTimer(self);self.backup_timer.timeout.connect(self.auto_backup);self.backup_timer.start(3600000)
+        QTimer.singleShot(5000,self.auto_backup)
+
+    def auto_backup(self):
+        if self.user.get('role')!='admin' or not self.user.get('token') or getattr(self,'_backup_busy',False):return
+        from shared.services import save_backup
+        from shared.config import APP_DIR
+        from datetime import datetime,timezone
+        folder=APP_DIR/'backups';today=datetime.now(timezone.utc).strftime('%Y%m%d')
+        if folder.exists() and any(folder.glob('library-'+today+'-*.json')):return
+        self._backup_busy=True
+        def done(text):self._backup_busy=False;self.backup_status.setText(text)
+        self.load(lambda:save_backup(self.api,self.user),lambda path:done('Automatic backup saved: '+path),lambda exc:done('Automatic backup failed: '+str(exc)))
+
     def build_books(self):
         w = QWidget()
         lay = QVBoxLayout(w)
