@@ -1,6 +1,6 @@
-# Windows release 1.3.1
+# Windows release 1.3.2
 
-Download **SMPCS_Library_Windows_v1.3.1.zip** from GitHub Releases. Extract the entire ZIP and open **SMPCS_Library.exe** inside. Keep the `_internal` folder beside the EXE. No Python installation is needed.
+Download **SMPCS_Library_Windows_v1.3.2.zip** from GitHub Releases. Extract the entire ZIP and open **SMPCS_Library.exe** inside. Keep the `_internal` folder beside the EXE. No Python installation is needed.
 
 The new package uses an application folder instead of extracting bundled executable files into a temporary folder on every launch. UPX is disabled. This may reduce packaging-related false positives but does not establish the cause of a reported detection. The build remains unsigned. Keep antivirus enabled and read `SCAN_REPORT.txt` for the actual scan outcome. If it is still blocked, provide the antivirus product and exact detection name for investigation.
 
@@ -52,3 +52,6 @@ The existing interface, database calls, borrowing workflow, and RFID behavior ar
 
 ## Kiosk settings
 Use the **Settings** button at the bottom of the kiosk. Sign in with your existing librarian/admin account to change full-screen mode, animations, GitHub update settings, or the station connection. Settings are available between transactions; RFID capture is paused while the settings dialogs are open and restored afterward.
+
+## Version 1.3.2
+Restores the original kiosk home layout: welcome/reader panel on the left, vertically stacked services and Register Here on the right. Uses the blue theme and readable light dialogs. Update checks, staff settings, attendance reports, and the non-self-extracting Windows package are retained.

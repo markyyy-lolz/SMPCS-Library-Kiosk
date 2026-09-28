@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = Path(os.getenv('APPDATA', str(Path.home()))) / 'SMPCS_Library' / 'updates.json'
 
