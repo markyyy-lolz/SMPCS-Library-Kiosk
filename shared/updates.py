@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = '1.2.1'
+VERSION = '1.3.0'
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = Path(os.getenv('APPDATA', str(Path.home()))) / 'SMPCS_Library' / 'updates.json'
 
@@ -97,7 +97,9 @@ def attach_updates(window, kiosk=False):
             if self.dialog:
                 self.dialog.show(); self.dialog.raise_(); self.dialog.activateWindow(); return
             dlg = self.dialog = QDialog(window)
-            dlg.setWindowTitle('SMPCS Library — Updates'); dlg.resize(530, 310)
+            from shared.theme import LIGHT_QSS
+            dlg.setStyleSheet(LIGHT_QSS)
+            dlg.setWindowTitle('SMPCS Library — Updates'); dlg.resize(600, 380)
             layout = QVBoxLayout(dlg)
             layout.addWidget(QLabel(f'Installed version: {VERSION}'))
             layout.addWidget(QLabel('Public GitHub repository URL or owner/repository'))

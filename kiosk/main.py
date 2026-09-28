@@ -26,7 +26,7 @@ from PyQt6.QtGui import (
     QColor, QPainter, QPen, QBrush, QLinearGradient, QPainterPath, QPixmap
 )
 from PyQt6.QtWidgets import (
-    QApplication, QCheckBox, QDialog, QFormLayout, QFrame, QGraphicsDropShadowEffect,
+    QApplication, QCheckBox, QDialog, QFormLayout, QGridLayout, QFrame, QGraphicsDropShadowEffect,
     QMessageBox,
     QGraphicsOpacityEffect, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
@@ -40,17 +40,17 @@ from shared.rfid import RFIDCapture
 # ============================================================
 # THEME
 # ============================================================
-WHITE = "#FFFDFC"
-BACKGROUND = "#F3ECE7"
-TEXT = "#2B2321"
-MUTED = "#84736D"
-MUTED_LIGHT = "#B7A9A2"
-BORDER = "#E7D9D2"
-BANNER_1 = "#FF6B4A"
-BANNER_2 = "#F23B59"
-ACCENT = "#F45142"
-ACCENT_DARK = "#D73B31"
-ACCENT_LIGHT = "#FFF0EB"
+WHITE = "#FFFFFF"
+BACKGROUND = "#F4F7FB"
+TEXT = "#172B46"
+MUTED = "#52647B"
+MUTED_LIGHT = "#65768B"
+BORDER = "#DCE5EF"
+BANNER_1 = "#3177C6"
+BANNER_2 = "#245DAD"
+ACCENT = "#245DAD"
+ACCENT_DARK = "#194A90"
+ACCENT_LIGHT = "#EAF2FF"
 SECONDARY = "#3E82E8"
 SUCCESS = "#1BAA67"
 SUCCESS_BG = "#EAF9F1"
@@ -70,8 +70,8 @@ MOTION_ENABLED = True
 ENABLE_BOOK_SCAN_SWEEP = True
 
 # Top banner size (increase these if your kiosk screen is large)
-BANNER_HEIGHT = 124
-LOGO_SIZE = 100
+BANNER_HEIGHT = 100
+LOGO_SIZE = 70
 
 
 # ============================================================
@@ -547,7 +547,7 @@ class DriveChip(QFrame):
             self.setStyleSheet(f"QFrame#driveChip{{background:{ACCENT_LIGHT};border:2px solid {ACCENT};border-radius:16px;}}")
         else:
             self.setStyleSheet(f"QFrame#driveChip{{background:{WHITE};border:2px solid transparent;border-radius:16px;}} "
-                               f"QFrame#driveChip:hover{{background:#FFF7F3;}}")
+                               f"QFrame#driveChip:hover{{background:#EAF2FF;}}")
 
     def set_active(self, on):
         self._active = on
@@ -603,7 +603,7 @@ class PrintTile(QFrame):
             self.setStyleSheet(f"QFrame#printTile{{background:{ACCENT_LIGHT};border:2px solid {ACCENT};border-radius:16px;}}")
         else:
             self.setStyleSheet(f"QFrame#printTile{{background:{WHITE};border:2px solid transparent;border-radius:16px;}} "
-                               f"QFrame#printTile:hover{{background:#FFF7F3;}}")
+                               f"QFrame#printTile:hover{{background:#EAF2FF;}}")
 
     def set_selected(self, on):
         self._selected = on
@@ -813,7 +813,7 @@ class PrintScreen(QFrame):
         back_btn = QPushButton("←  BACK")
         back_btn.setMinimumHeight(46)
         back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        back_btn.setStyleSheet(f"QPushButton{{background:#EFE9E5;color:{TEXT};border:none;border-radius:12px;padding:0 18px;font-weight:900;}} "
+        back_btn.setStyleSheet(f"QPushButton{{background:#E3EBF6;color:{TEXT};border:none;border-radius:12px;padding:0 18px;font-weight:900;}} "
                                f"QPushButton:pressed{{background:#E2D8D2;}}")
         back_btn.clicked.connect(self.back.emit)
         title_col = QVBoxLayout()
@@ -883,7 +883,7 @@ class PrintScreen(QFrame):
         self.up_btn = QPushButton("⬆  UP")
         self.up_btn.setMinimumHeight(40)
         self.up_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.up_btn.setStyleSheet(f"QPushButton{{background:#F3ECE7;color:{TEXT};border:none;border-radius:10px;padding:0 14px;font-weight:900;}} "
+        self.up_btn.setStyleSheet(f"QPushButton{{background:#F4F7FB;color:{TEXT};border:none;border-radius:10px;padding:0 14px;font-weight:900;}} "
                                   f"QPushButton:disabled{{color:{MUTED_LIGHT};}}")
         self.up_btn.clicked.connect(self.go_up)
         self.breadcrumb = QLabel("")
@@ -891,7 +891,7 @@ class PrintScreen(QFrame):
         refresh_btn = QPushButton("↻  REFRESH")
         refresh_btn.setMinimumHeight(40)
         refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        refresh_btn.setStyleSheet(f"QPushButton{{background:#F3ECE7;color:{TEXT};border:none;border-radius:10px;padding:0 14px;font-weight:900;}}")
+        refresh_btn.setStyleSheet(f"QPushButton{{background:#F4F7FB;color:{TEXT};border:none;border-radius:10px;padding:0 14px;font-weight:900;}}")
         refresh_btn.clicked.connect(lambda: self.open_path(self._path) if self._path else None)
         tl.addWidget(self.up_btn)
         tl.addWidget(self.breadcrumb, 1)
@@ -1192,8 +1192,8 @@ class BannerFrame(QFrame):
         w = float(self.width())
         g = QLinearGradient(0, 0, w, 0)
         g.setColorAt(0.0, QColor(BANNER_2))
-        g.setColorAt(0.6, QColor("#F64757"))
-        g.setColorAt(1.0, QColor("#FF6A4B"))
+        g.setColorAt(0.6, QColor("#2D73BC"))
+        g.setColorAt(1.0, QColor("#3493B8"))
         p.fillRect(self.rect(), QBrush(g))
         # streak passes once every ~7 seconds
         cycle = ((clock() - self._t0) % 7.0) / 7.0
@@ -1932,7 +1932,7 @@ class ServicePromo(QFrame):
     """Small animated service illustration beside the home advertisement."""
     MODES = (
         ("ATTENDANCE", "TIME IN / TIME OUT", "#1BAA67"),
-        ("BORROW", "TAKE A BOOK", "#F23B59"),
+        ("BORROW", "TAKE A BOOK", "#245DAD"),
         ("RETURN", "SURRENDER A BOOK", "#3E82E8"),
     )
 
@@ -1978,7 +1978,7 @@ class ServicePromo(QFrame):
 
         if mode == "ATTENDANCE":
             p.setBrush(QColor("#FFFFFF"))
-            p.setPen(QPen(QColor("#E7D9D2"), 1.2))
+            p.setPen(QPen(QColor("#DCE5EF"), 1.2))
             p.drawRoundedRect(34, 42 + dy, 68, 86, 10, 10)
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(c)
@@ -2007,7 +2007,7 @@ class ServicePromo(QFrame):
             p.drawLine(44, 74 - dy, 159, 74 - dy)
             p.drawLine(44, 112 - dy, 159, 112 - dy)
             p.setPen(Qt.PenStyle.NoPen)
-            for x, col in ((50, "#F23B59"), (73, "#3E82E8"), (96, "#1BAA67"), (116, accent)):
+            for x, col in ((50, "#245DAD"), (73, "#3E82E8"), (96, "#1BAA67"), (116, accent)):
                 p.setBrush(QColor(col))
                 p.drawRoundedRect(x, 79 - dy if x != 116 else 71 - dy, 18 if x != 116 else 33, 30 if x != 116 else 39, 4, 4)
 
@@ -2034,7 +2034,7 @@ class SimpleScanPanel(QFrame):
     """Static RFID reader area. No pulse/ripple animation - only smooth text/colour transitions."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setStyleSheet("QFrame{background:#FFFDFC;border:none;border-radius:24px;}")
+        self.setStyleSheet("QFrame{background:#FFFFFF;border:none;border-radius:24px;}")
         self.setMinimumHeight(220)
         root = QHBoxLayout(self); root.setContentsMargins(26,22,26,22); root.setSpacing(24)
         self.reader = QLabel("RFID")
@@ -2047,7 +2047,7 @@ class SimpleScanPanel(QFrame):
         self.hint = QLabel("Your account will be identified automatically."); self.hint.setStyleSheet(f"color:{TEXT};font-size:11px;font-weight:750;")
         steps = QHBoxLayout(); steps.setSpacing(10)
         for n, label, color in (("01","TAP ID",BANNER_2),("02","SELECT",SECONDARY),("03","SCAN BOOK",SUCCESS)):
-            chip = QFrame(); chip.setStyleSheet("QFrame{background:#F8F1ED;border:none;border-radius:10px;}")
+            chip = QFrame(); chip.setStyleSheet("QFrame{background:#EDF3FB;border:none;border-radius:10px;}")
             cl=QHBoxLayout(chip); cl.setContentsMargins(10,7,10,7)
             a=QLabel(n); a.setStyleSheet(f"color:{color};font-size:8px;font-weight:950;")
             b=QLabel(label); b.setStyleSheet(f"color:{TEXT};font-size:8px;font-weight:900;")
@@ -2160,7 +2160,7 @@ class VirtualKeyboard(QFrame):
         b.setFocusPolicy(Qt.FocusPolicy.NoFocus)                                # never steal focus from the field
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         if key == "DONE":
-            b.setStyleSheet(self._style("#F23B59", "white", 16, "#C82E48"))
+            b.setStyleSheet(self._style("#245DAD", "white", 16, "#C82E48"))
         elif key == "SHIFT":
             self._shift_btn = b
             b.setStyleSheet(self._style("#485467", "white", 15))
@@ -2207,7 +2207,7 @@ class VirtualKeyboard(QFrame):
             b.setText(k.upper() if up else k.lower())
         if self._shift_btn is not None:
             if self.shift:
-                self._shift_btn.setStyleSheet(self._style("#F23B59", "white", 15, "#C82E48"))
+                self._shift_btn.setStyleSheet(self._style("#245DAD", "white", 15, "#C82E48"))
             else:
                 self._shift_btn.setStyleSheet(self._style("#485467", "white", 15))
 
@@ -2334,17 +2334,17 @@ class Kiosk(QMainWindow):
         clear="background:transparent;border:none;"
         lay.addWidget(LogoBadge(LOGO_SIZE),alignment=Qt.AlignmentFlag.AlignVCenter)
         brand=QVBoxLayout(); brand.setSpacing(4); brand.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        school=QLabel("ST. MARTIN DE PORRES CATHOLIC SCHOOL, INC."); school.setStyleSheet(f"{clear}color:white;font-size:32px;font-weight:950;")
+        school=QLabel("ST. MARTIN DE PORRES CATHOLIC SCHOOL, INC."); school.setStyleSheet(f"{clear}color:white;font-size:24px;font-weight:800;")
         lib=QLabel("LIBRARY KIOSK   •   SELF SERVICE"); lib.setStyleSheet(f"{clear}color:rgba(255,255,255,235);font-size:15px;font-weight:800;letter-spacing:2px;")
         brand.addWidget(school); brand.addWidget(lib); lay.addLayout(brand,1)
         clock_col=QVBoxLayout(); clock_col.setSpacing(2); clock_col.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
-        self.clock=QLabel(); self.clock.setAlignment(Qt.AlignmentFlag.AlignRight); self.clock.setStyleSheet(f"{clear}color:white;font-size:44px;font-weight:950;")
+        self.clock=QLabel(); self.clock.setAlignment(Qt.AlignmentFlag.AlignRight); self.clock.setStyleSheet(f"{clear}color:white;font-size:34px;font-weight:800;")
         self.date_label=QLabel(); self.date_label.setAlignment(Qt.AlignmentFlag.AlignRight); self.date_label.setStyleSheet(f"{clear}color:rgba(255,255,255,235);font-size:15px;font-weight:700;")
         clock_col.addWidget(self.clock); clock_col.addWidget(self.date_label); lay.addLayout(clock_col)
         self.main_layout.addWidget(banner)
 
     def build_status_bar(self):
-        bar=QFrame(); bar.setObjectName("statusBar"); bar.setFixedHeight(42); bar.setStyleSheet("QFrame#statusBar{background:#ECE3DE;border-top:1px solid #DCCFC8;} QFrame#statusBar QLabel{background:transparent;border:none;}"); lay=QHBoxLayout(bar); lay.setContentsMargins(20,5,20,5)
+        bar=QFrame(); bar.setObjectName("statusBar"); bar.setFixedHeight(42); bar.setStyleSheet("QFrame#statusBar{background:#E8EFF7;border-top:1px solid #CED9E7;} QFrame#statusBar QLabel{background:transparent;border:none;}"); lay=QHBoxLayout(bar); lay.setContentsMargins(20,5,20,5)
         self.status_dot=QLabel("●"); self.status=QLabel("CONNECTING..."); self.station=QLabel(f"Station: {self.cfg.get('STATION_NAME','Library Kiosk')}"); ready=QLabel("RFID  •  TOUCHSCREEN READY")
         self.status_dot.setStyleSheet(f"color:{MUTED};font-size:12px;"); self.status.setStyleSheet(f"color:{TEXT};font-size:11px;font-weight:800;"); self.station.setStyleSheet(f"color:{MUTED};font-size:10px;font-weight:700;"); ready.setStyleSheet(f"color:{MUTED};font-size:10px;font-weight:800;")
         # the status dot gently "breathes" while the station is online
@@ -2370,7 +2370,7 @@ class Kiosk(QMainWindow):
             if login.exec()!=QDialog.DialogCode.Accepted: return
             dialog=QDialog(self); dialog.setWindowTitle("Kiosk Settings")
             dialog.setMinimumWidth(500)
-            dialog.setStyleSheet("QDialog{background:#F3ECE7;} QLabel,QCheckBox{color:#192B45;font-size:14px;} QPushButton{background:#192B45;color:white;border-radius:10px;padding:13px;font-weight:700;}")
+            dialog.setStyleSheet("QDialog{background:#F4F7FB;} QLabel,QCheckBox{color:#192B45;font-size:14px;} QPushButton{background:#192B45;color:white;border-radius:10px;padding:13px;font-weight:700;}")
             layout=QVBoxLayout(dialog); layout.setContentsMargins(26,26,26,26); layout.setSpacing(15)
             layout.addWidget(QLabel(f"SMPCS Library • Version {VERSION}"))
             layout.addWidget(QLabel("Station: "+self.cfg.get("STATION_NAME","Library Kiosk")))
@@ -2421,39 +2421,37 @@ class Kiosk(QMainWindow):
     # ========================================================
     def show_home(self):
         self.member=None; self.mode="member"; self.manual=None; self.pending_action=None; self.clear_content()
-        page=QFrame(); page.setStyleSheet(f"QFrame{{background:{BACKGROUND};border:none;}}")
-        outer=QVBoxLayout(page); outer.setContentsMargins(0,0,0,0); outer.setSpacing(12)
-        nav=QFrame(); nav.setFixedHeight(48); nav.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:16px;}}"); nl=QHBoxLayout(nav); nl.setContentsMargins(14,7,14,7); nl.setSpacing(9)
-        chip=QLabel("LIBRARY"); chip.setAlignment(Qt.AlignmentFlag.AlignCenter); chip.setFixedSize(82,32); chip.setStyleSheet(f"QLabel{{background:{BANNER_2};color:white;border-radius:9px;font-size:8px;font-weight:950;letter-spacing:1px;}}")
-        title=QLabel("LIBRARY SELF-SERVICE"); title.setStyleSheet(f"color:{TEXT};font-size:15px;font-weight:950;"); sub=QLabel("Borrow  •  Return  •  Attendance"); sub.setStyleSheet(f"color:{MUTED};font-size:9px;font-weight:700;")
-        ready=QLabel("● READY"); ready.setAlignment(Qt.AlignmentFlag.AlignCenter); ready.setFixedSize(84,30); ready.setStyleSheet(f"QLabel{{background:{SUCCESS_BG};color:{SUCCESS};border:none;border-radius:10px;font-size:8px;font-weight:950;}}")
-        nl.addWidget(chip); nl.addWidget(title); nl.addWidget(sub); nl.addStretch(); nl.addWidget(ready); outer.addWidget(nav)
-        cols=QHBoxLayout(); cols.setSpacing(12); left=QVBoxLayout(); left.setSpacing(12)
-        hero=QFrame(); hero.setMinimumHeight(228); hero.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:22px;}}"); hl=QHBoxLayout(hero); hl.setContentsMargins(24,22,22,20); hl.setSpacing(16)
-        copy=QVBoxLayout(); copy.setSpacing(7); ey=QLabel("WELCOME TO THE LIBRARY"); ey.setStyleSheet(f"color:{BANNER_2};font-size:10px;font-weight:950;letter-spacing:1.5px;"); ht=QLabel("READ. DISCOVER.\nGROW."); ht.setStyleSheet(f"color:{TEXT};font-size:37px;font-weight:950;"); desc=QLabel("A simple, fast self-service station for your school library."); desc.setWordWrap(True); desc.setStyleSheet(f"color:{MUTED};font-size:13px;font-weight:650;")
-        copy.addWidget(ey); copy.addWidget(ht); copy.addWidget(desc); copy.addStretch(); pills=QHBoxLayout(); pills.setSpacing(8)
-        for t,bg,fc in (("RFID","#FCECEE",BANNER_2),("FAST","#EEF4FF",SECONDARY),("EASY","#ECF9F2",SUCCESS)):
-            x=QLabel(t); x.setAlignment(Qt.AlignmentFlag.AlignCenter); x.setFixedSize(58,28); x.setStyleSheet(f"QLabel{{background:{bg};color:{fc};border:none;border-radius:9px;font-size:8px;font-weight:950;}}"); pills.addWidget(x)
-        pills.addStretch(); copy.addLayout(pills); hl.addLayout(copy,1); hl.addWidget(ServicePromo()); left.addWidget(hero)
-        self.scan_panel=SimpleScanPanel(); left.addWidget(self.scan_panel)
-        steps=QHBoxLayout(); steps.setSpacing(14)
-        for n,t,b,c in (("01","TAP ID","Identify your account",BANNER_2),("02","SELECT","Choose a service",SECONDARY),("03","SCAN BOOK","Finish your transaction",SUCCESS)):
-            col=QVBoxLayout(); num=QLabel(n); num.setStyleSheet(f"color:{c};font-size:9px;font-weight:950;"); ttl=QLabel(t); ttl.setStyleSheet(f"color:{TEXT};font-size:10px;font-weight:950;"); sb=QLabel(b); sb.setStyleSheet(f"color:{MUTED};font-size:9px;font-weight:650;"); col.addWidget(num); col.addWidget(ttl); col.addWidget(sb); steps.addLayout(col,1)
-        left.addLayout(steps); cols.addLayout(left,7)
-        right=QVBoxLayout(); right.setSpacing(11)
-        status=QFrame(); status.setFixedHeight(110); status.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:18px;}}"); sl=QVBoxLayout(status); sl.setContentsMargins(16,13,16,12)
-        a=QLabel("LIBRARY STATUS"); a.setStyleSheet(f"color:{MUTED};font-size:9px;font-weight:950;letter-spacing:1.1px;"); b=QLabel("READY"); b.setStyleSheet(f"color:{BANNER_2};font-size:26px;font-weight:950;"); c=QLabel("Kiosk service is available"); c.setStyleSheet(f"color:{TEXT};font-size:10px;font-weight:750;"); line=QFrame(); line.setFixedHeight(4); line.setStyleSheet(f"background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {BANNER_2},stop:.6 {BANNER_1},stop:1 #FFC45D);border:none;border-radius:2px;"); sl.addWidget(a); sl.addWidget(b); sl.addWidget(c); sl.addSpacing(5); sl.addWidget(line); right.addWidget(status)
-        btn_borrow=self.home_action_button("BORROW A BOOK","Scan your ID  •  scan the book",BANNER_2,self.borrow_from_home,"📖")
-        btn_return=self.home_action_button("RETURN A BOOK","Scan your ID  •  scan the book",SECONDARY,self.return_from_home,"↩")
-        btn_attend=self.home_action_button("ATTENDANCE","Time in  •  time out",SUCCESS,self.attendance_from_home,"✓")
-        btn_print=self.home_action_button("PRINT A FILE","Scan your ID  •  choose a file",GOLD,self.print_from_home,"🖨")
-        right.addWidget(btn_borrow); right.addWidget(btn_return); right.addWidget(btn_attend); right.addWidget(btn_print)
-        reminder=QFrame(); reminder.setStyleSheet("QFrame{background:#FFF5DD;border:none;border-radius:15px;}"); rl=QVBoxLayout(reminder); rl.setContentsMargins(14,11,14,11); r1=QLabel("QUICK REMINDER"); r1.setStyleSheet("color:#B56A13;font-size:8px;font-weight:950;letter-spacing:1px;"); r2=QLabel("Return books on or before the date you select."); r2.setWordWrap(True); r2.setStyleSheet(f"color:{TEXT};font-size:10px;font-weight:750;"); rl.addWidget(r1); rl.addWidget(r2); right.addWidget(reminder)
-        reg=QPushButton("REGISTER HERE\nNew student / no library account"); reg.setMinimumHeight(78); reg.setCursor(Qt.CursorShape.PointingHandCursor); reg.setStyleSheet(f"QPushButton{{background:#FCE3DA;color:{TEXT};border:none;border-radius:16px;text-align:left;padding:13px 16px;font-size:12px;font-weight:950;}} QPushButton:hover{{background:#F9D5C8;}}"); reg.clicked.connect(self.show_registration); right.addWidget(reg); right.addStretch(); cols.addLayout(right,3)
-        outer.addLayout(cols,1); foot=QLabel("Touch a service, or simply tap your school ID on the RFID reader."); foot.setAlignment(Qt.AlignmentFlag.AlignCenter); foot.setStyleSheet(f"color:{MUTED};font-size:10px;font-weight:700;"); outer.addWidget(foot); self.content_layout.addWidget(page,1)
-        # cascade entrance: everything glides in, one card after another
-        stagger_fade([nav,hero,self.scan_panel,status,btn_borrow,btn_return,btn_attend,btn_print,reminder,reg,foot],start=30,step=75,duration=380)
-        QTimer.singleShot(80,lambda:self._add_home_motion(page))
+        page=QFrame(); page.setObjectName("homePage")
+        root=QVBoxLayout(page); root.setContentsMargins(8,4,8,4); root.setSpacing(18)
+        home_title=QLabel("Welcome to your library"); home_title.setStyleSheet(f"color:{TEXT};font-size:30px;font-weight:800;")
+        subtitle=QLabel("Tap your school ID, or choose a service to get started."); subtitle.setStyleSheet(f"color:{MUTED};font-size:15px;")
+        root.addWidget(home_title); root.addWidget(subtitle)
+        columns=QHBoxLayout(); columns.setSpacing(22)
+        left=QVBoxLayout(); left.setSpacing(16)
+        self.scan_panel=SimpleScanPanel(); self.scan_panel.title.setWordWrap(True); self.scan_panel.hint.setWordWrap(True)
+        self.scan_panel.reader.setFixedSize(76,76)
+        self.scan_panel.title.setStyleSheet(f"color:{TEXT};font-size:24px;font-weight:800;")
+        self.scan_panel.setMinimumHeight(240); left.addWidget(self.scan_panel,1)
+        note=QLabel("01  Tap ID     →     02  Choose service     →     03  Follow the steps")
+        note.setWordWrap(True); note.setStyleSheet(f"background:#EAF2FF;color:{TEXT};padding:18px;border-radius:14px;font-size:13px;font-weight:700;")
+        left.addWidget(note)
+        reg=QPushButton("Register here  →\nNew to the library? Create your account.")
+        reg.setMinimumHeight(88); reg.setStyleSheet(f"QPushButton{{background:white;color:{ACCENT};border:2px solid #C7DBF6;border-radius:16px;text-align:left;padding:16px;font-size:16px;font-weight:700;}} QPushButton:hover{{background:#EAF2FF;}}")
+        reg.clicked.connect(self.show_registration); left.addWidget(reg)
+        columns.addLayout(left,5)
+        services=QGridLayout(); services.setSpacing(16)
+        specs=[("Borrow a book","Choose your next read",BANNER_2,self.borrow_from_home,"01"),
+               ("Return a book","Return a borrowed title",SECONDARY,self.return_from_home,"02"),
+               ("Attendance","Record your time in or out",SUCCESS,self.attendance_from_home,"03"),
+               ("Print a file","Print from a USB drive","#8B5F13",self.print_from_home,"04")]
+        buttons=[]
+        for i,(title,sub,color,callback,icon) in enumerate(specs):
+            button=self.home_action_button(title,sub,color,callback,icon); services.addWidget(button,i//2,i%2); buttons.append(button)
+        columns.addLayout(services,7); root.addLayout(columns,1)
+        reminder=QLabel("Borrowing requests still need librarian verification. Please return books by your selected due date.")
+        reminder.setWordWrap(True); reminder.setStyleSheet(f"color:{MUTED};font-size:13px;padding:4px;"); root.addWidget(reminder)
+        self.content_layout.addWidget(page,1)
+        stagger_fade([home_title,subtitle,self.scan_panel,reg]+buttons,start=0,step=45,duration=260)
 
     def _add_home_motion(self,page):
         if sip.isdeleted(page) or not page.isVisible(): return
@@ -2463,7 +2461,17 @@ class Kiosk(QMainWindow):
             d=FloatingDot(page,*spec); page._dots.append(d); d.lower()
 
     def home_action_button(self,title,subtitle,color,callback,icon="•"):
-        btn=ShimmerButton(); btn.setCursor(Qt.CursorShape.PointingHandCursor); btn.setMinimumHeight(82); btn.setMaximumHeight(92); btn.setText(f"{icon}   {title}\n      {subtitle}"); btn.setStyleSheet(f"QPushButton{{background:{WHITE};color:{TEXT};border:none;border-left:7px solid {color};border-radius:16px;text-align:left;padding:10px 15px;font-size:12px;font-weight:900;}} QPushButton:hover{{background:#FFF7F3;}} QPushButton:pressed{{background:#F5EAE5;}}"); btn.clicked.connect(callback); return btn
+        btn=QPushButton(); btn.setMinimumHeight(156); btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setAccessibleName(title)
+        btn.setStyleSheet(f"QPushButton{{background:white;border:1px solid #D6E2F0;border-bottom:5px solid {color};border-radius:18px;text-align:left;}} QPushButton:hover{{background:#EAF2FF;border:2px solid {color};}} QPushButton:pressed{{background:#DCEAFF;}}")
+        layout=QVBoxLayout(btn); layout.setContentsMargins(20,18,20,18); layout.setSpacing(9)
+        badge=QLabel(icon+"   →"); badge.setStyleSheet(f"color:{color};font-size:21px;font-weight:800;")
+        heading=QLabel(title); heading.setWordWrap(True); heading.setStyleSheet(f"color:{TEXT};font-size:23px;font-weight:800;")
+        detail=QLabel(subtitle); detail.setWordWrap(True); detail.setStyleSheet(f"color:{MUTED};font-size:14px;")
+        for label in (badge,heading,detail):
+            label.setStyleSheet(label.styleSheet()+"background:transparent;")
+            label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents); layout.addWidget(label)
+        layout.addStretch(); btn.clicked.connect(callback); return btn
 
     # ========================================================
     # REGISTRATION
@@ -2475,13 +2483,13 @@ class Kiosk(QMainWindow):
         copy=QVBoxLayout(); ey=QLabel("LIBRARY MEMBERSHIP"); ey.setStyleSheet(f"color:{BANNER_2};font-size:10px;font-weight:950;letter-spacing:1.5px;"); title=QLabel("REGISTER HERE"); title.setStyleSheet(f"color:{TEXT};font-size:34px;font-weight:950;"); sub=QLabel("Fill in your details, tap your school RFID, then proceed to the librarian for verification."); sub.setWordWrap(True); sub.setStyleSheet(f"color:{MUTED};font-size:12px;font-weight:650;"); steps=QLabel("01 PERSONAL INFO    02 RFID    03 LIBRARIAN VERIFICATION"); steps.setStyleSheet(f"color:{BANNER_2};font-size:9px;font-weight:950;letter-spacing:.8px;"); copy.addWidget(ey); copy.addWidget(title); copy.addWidget(sub); copy.addSpacing(4); copy.addWidget(steps); hl.addLayout(copy,1); hl.addWidget(ServicePromo()); root.addWidget(hero)
         row=QHBoxLayout(); row.setSpacing(12); left=QFrame(); left.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:20px;}}"); ll=QVBoxLayout(left); ll.setContentsMargins(20,18,20,18); ll.setSpacing(9); right=QFrame(); right.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:20px;}}"); rr=QVBoxLayout(right); rr.setContentsMargins(20,18,20,18); rr.setSpacing(9)
         def field(parent,label,ph,read_only=False):
-            lab=QLabel(label); lab.setStyleSheet(f"color:{TEXT};font-size:9px;font-weight:950;letter-spacing:.8px;"); box=QLineEdit(); box.setPlaceholderText(ph); box.setReadOnly(read_only); box.setMinimumHeight(52); box.setStyleSheet(f"QLineEdit{{background:#FCFAF8;color:{TEXT};border:none;border-bottom:3px solid #E8DAD4;border-radius:10px;padding:0 13px;font-size:13px;font-weight:750;}} QLineEdit:focus{{background:white;border-bottom:3px solid {BANNER_2};}} QLineEdit:read-only{{background:#F5F0EC;color:{BANNER_2};}}"); parent.addWidget(lab); parent.addWidget(box); return box
+            lab=QLabel(label); lab.setStyleSheet(f"color:{TEXT};font-size:9px;font-weight:950;letter-spacing:.8px;"); box=QLineEdit(); box.setPlaceholderText(ph); box.setReadOnly(read_only); box.setMinimumHeight(52); box.setStyleSheet(f"QLineEdit{{background:#FFFFFF;color:{TEXT};border:none;border-bottom:3px solid #CDD9E7;border-radius:10px;padding:0 13px;font-size:13px;font-weight:750;}} QLineEdit:focus{{background:white;border-bottom:3px solid {BANNER_2};}} QLineEdit:read-only{{background:#EEF3FA;color:{BANNER_2};}}"); parent.addWidget(lab); parent.addWidget(box); return box
         lab1=QLabel("STUDENT INFORMATION"); lab1.setStyleSheet(f"color:{BANNER_2};font-size:10px;font-weight:950;letter-spacing:1.1px;"); ll.addWidget(lab1); self.reg_name=field(ll,"FULL NAME","Enter your complete name"); self.reg_student_id=field(ll,"STUDENT ID","Enter your student ID"); self.reg_grade=field(ll,"GRADE / LEVEL","e.g. Grade 10"); self.reg_section=field(ll,"SECTION","Enter your section")
-        lab2=QLabel("REGISTRATION"); lab2.setStyleSheet(f"color:{BANNER_2};font-size:10px;font-weight:950;letter-spacing:1.1px;"); rr.addWidget(lab2); self.reg_rfid=field(rr,"SCHOOL RFID","Tap the button below to capture RFID",True); self.reg_note=field(rr,"NOTE FOR LIBRARIAN","Optional note"); self.reg_status=QLabel("WAITING FOR RFID"); self.reg_status.setAlignment(Qt.AlignmentFlag.AlignCenter); self.reg_status.setFixedHeight(34); self.reg_status.setStyleSheet(f"QLabel{{background:#F3EEE9;color:{MUTED};border-radius:10px;font-size:9px;font-weight:950;}}"); rr.addWidget(self.reg_status)
+        lab2=QLabel("REGISTRATION"); lab2.setStyleSheet(f"color:{BANNER_2};font-size:10px;font-weight:950;letter-spacing:1.1px;"); rr.addWidget(lab2); self.reg_rfid=field(rr,"SCHOOL RFID","Tap the button below to capture RFID",True); self.reg_note=field(rr,"NOTE FOR LIBRARIAN","Optional note"); self.reg_status=QLabel("WAITING FOR RFID"); self.reg_status.setAlignment(Qt.AlignmentFlag.AlignCenter); self.reg_status.setFixedHeight(34); self.reg_status.setStyleSheet(f"QLabel{{background:#EAF0F8;color:{MUTED};border-radius:10px;font-size:9px;font-weight:950;}}"); rr.addWidget(self.reg_status)
         row.addWidget(left,1); row.addWidget(right,1); root.addLayout(row)
         scan=QPushButton("TAP SCHOOL RFID TO REGISTER"); scan.setMinimumHeight(58); scan.setStyleSheet(f"QPushButton{{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {BANNER_2},stop:1 {BANNER_1});color:white;border:none;border-radius:14px;font-size:13px;font-weight:950;}}"); scan.clicked.connect(self._prepare_registration_rfid); root.addWidget(scan)
         note=QLabel("After completing this form, proceed to the librarian for verification and account activation."); note.setWordWrap(True); note.setStyleSheet("color:#A66D16;background:#FFF5DD;border-radius:12px;padding:10px;font-size:10px;font-weight:750;"); root.addWidget(note)
-        actions=QHBoxLayout(); cancel=QPushButton("CANCEL / BACK TO START"); cancel.setMinimumHeight(52); cancel.setStyleSheet("QPushButton{background:#ECE5E1;color:#5E514C;border:none;border-radius:13px;font-weight:900;}"); cancel.clicked.connect(self.reset); cont=QPushButton("CONTINUE TO LIBRARIAN  →"); cont.setMinimumHeight(52); cont.setStyleSheet(f"QPushButton{{background:{SUCCESS};color:white;border:none;border-radius:13px;font-weight:900;}}"); cont.clicked.connect(self.submit_registration_request); actions.addWidget(cancel,1); actions.addWidget(cont,1); root.addLayout(actions)
+        actions=QHBoxLayout(); cancel=QPushButton("CANCEL / BACK TO START"); cancel.setMinimumHeight(52); cancel.setStyleSheet("QPushButton{background:#E3EBF6;color:#334C6C;border:none;border-radius:13px;font-weight:900;}"); cancel.clicked.connect(self.reset); cont=QPushButton("CONTINUE TO LIBRARIAN  →"); cont.setMinimumHeight(52); cont.setStyleSheet(f"QPushButton{{background:{SUCCESS};color:white;border:none;border-radius:13px;font-weight:900;}}"); cont.clicked.connect(self.submit_registration_request); actions.addWidget(cancel,1); actions.addWidget(cont,1); root.addLayout(actions)
         self.keyboard=VirtualKeyboard(page); self.keyboard.hide(); self.keyboard.visibilityChanged.connect(lambda visible,h=hero,n=note:self._kb_visibility(visible,h,n))
         for field_widget in (self.reg_name,self.reg_student_id,self.reg_grade,self.reg_section,self.reg_note):
             field_widget.focusInEvent=self._make_keyboard_focus(field_widget)
@@ -2516,7 +2524,7 @@ class Kiosk(QMainWindow):
         QTimer.singleShot(0,self._place_keyboard)   # re-place once the form has re-flowed
 
     def _prepare_registration_rfid(self):
-        self.mode="register_rfid"; self.reg_status.setText("TAP YOUR SCHOOL RFID NOW"); self.reg_status.setStyleSheet(f"QLabel{{background:#FFF0EB;color:{BANNER_2};border-radius:10px;font-size:9px;font-weight:950;}}"); self.status.setText("REGISTERING • Tap your school RFID…"); fade_in(self.reg_status,260)
+        self.mode="register_rfid"; self.reg_status.setText("TAP YOUR SCHOOL RFID NOW"); self.reg_status.setStyleSheet(f"QLabel{{background:#EAF2FF;color:{BANNER_2};border-radius:10px;font-size:9px;font-weight:950;}}"); self.status.setText("REGISTERING • Tap your school RFID…"); fade_in(self.reg_status,260)
 
     def _handle_registration_rfid(self,uid):
         if not hasattr(self,'reg_rfid'): return
@@ -2662,7 +2670,7 @@ class Kiosk(QMainWindow):
         w=QLabel("WELCOME BACK"); w.setStyleSheet(f"color:{BANNER_2};font-size:10px;font-weight:950;letter-spacing:1.6px;"); h=QLabel("What would you like to do?"); h.setStyleSheet(f"color:{TEXT};font-size:31px;font-weight:950;"); s=QLabel(name.upper()); s.setWordWrap(True); s.setStyleSheet(f"color:{MUTED};font-size:14px;font-weight:800;"); helper=QLabel("Choose a service below."); helper.setStyleSheet(f"color:{MUTED};font-size:11px;font-weight:650;"); ll.addWidget(w); ll.addWidget(h); ll.addWidget(s); ll.addWidget(helper); ll.addSpacing(6)
         action_buttons=[]
         for title,desc,color,cb,icon in (("ATTENDANCE","Time in / time out",SUCCESS,self.attendance,"✓"),("BORROW BOOK","Take a book",BANNER_2,self.borrow_start,"📖"),("RETURN BOOK","Surrender a book",SECONDARY,self.return_start,"↩"),("PRINT A FILE","Print from a USB drive",GOLD,self.print_start,"🖨")):
-            b=ShimmerButton(); b.setMinimumHeight(88); b.setText(f"{icon}   {title}\n      {desc}"); b.setStyleSheet(f"QPushButton{{background:#FFF8F5;color:{TEXT};border:none;border-left:8px solid {color};border-radius:16px;text-align:left;padding:11px 16px;font-size:12px;font-weight:950;}} QPushButton:hover{{background:#FFF0EB;}} QPushButton:pressed{{background:#F7E7E0;}}"); b.clicked.connect(cb); ll.addWidget(b); action_buttons.append(b)
+            b=ShimmerButton(); b.setMinimumHeight(88); b.setText(f"{icon}   {title}\n      {desc}"); b.setStyleSheet(f"QPushButton{{background:#FFF8F5;color:{TEXT};border:none;border-left:8px solid {color};border-radius:16px;text-align:left;padding:11px 16px;font-size:12px;font-weight:950;}} QPushButton:hover{{background:#EAF2FF;}} QPushButton:pressed{{background:#F7E7E0;}}"); b.clicked.connect(cb); ll.addWidget(b); action_buttons.append(b)
         note=QFrame(); note.setStyleSheet("QFrame{background:#FFF5DD;border:none;border-radius:14px;}"); nl=QHBoxLayout(note); nl.setContentsMargins(14,10,14,10); inf=QLabel("i"); inf.setFixedSize(28,28); inf.setAlignment(Qt.AlignmentFlag.AlignCenter); inf.setStyleSheet("background:#F2B84B;color:white;border-radius:14px;font-size:14px;font-weight:950;"); nt=QLabel("Borrowing a book will ask you to choose the date you want to surrender it."); nt.setWordWrap(True); nt.setStyleSheet(f"color:{TEXT};font-size:10px;font-weight:750;"); nl.addWidget(inf); nl.addWidget(nt,1); ll.addWidget(note); ll.addStretch(); back=QPushButton("←  CANCEL / BACK TO START"); back.setMinimumHeight(48); back.setStyleSheet(f"QPushButton{{background:#F2ECE8;color:{MUTED};border:none;border-radius:12px;font-size:10px;font-weight:950;}} QPushButton:hover{{background:#EAE1DC;color:{TEXT};}}"); back.clicked.connect(self.reset); ll.addWidget(back)
         info=QFrame(); info.setFixedWidth(365); info.setStyleSheet("QFrame{background:#172237;border:none;border-radius:22px;}"); il=QVBoxLayout(info); il.setContentsMargins(22,22,22,22); il.setSpacing(10)
         head=QLabel("STUDENT INFORMATION"); head.setStyleSheet("color:rgba(255,255,255,185);font-size:9px;font-weight:950;letter-spacing:1.5px;")
@@ -2732,7 +2740,7 @@ class Kiosk(QMainWindow):
         grid=QGridLayout(); grid.setSpacing(8); labels=[("1","1"),("2","2"),("3","3"),("4","4"),("5","5"),("6","6"),("7","7"),("8","8"),("9","9"),("CLR","CLEAR"),("0","0"),("OK","SUBMIT")]
         for i,(txt,key) in enumerate(labels):
             b=QPushButton(txt); b.setMinimumHeight(52); b.setStyleSheet(f"QPushButton{{background:{accent if key=='SUBMIT' else '#FAF8F7'};color:{'white' if key=='SUBMIT' else TEXT};border:none;border-radius:12px;font-size:16px;font-weight:900;}} QPushButton:pressed{{background:#EDE2DD;}}"); b.clicked.connect(lambda _,k=key:self.keypad(k)); grid.addWidget(b,i//3,i%3)
-        kl.addLayout(grid); body.addWidget(keys,4); lay.addLayout(body,1); back=QPushButton("←  BACK"); back.setMinimumHeight(50); back.clicked.connect(self.show_member); back.setStyleSheet(f"QPushButton{{background:#EFE9E5;color:{TEXT};border:none;border-radius:12px;font-weight:900;}}"); lay.addWidget(back); self.content_layout.addWidget(page,1); self.manual.setFocus()
+        kl.addLayout(grid); body.addWidget(keys,4); lay.addLayout(body,1); back=QPushButton("←  BACK"); back.setMinimumHeight(50); back.clicked.connect(self.show_member); back.setStyleSheet(f"QPushButton{{background:#E3EBF6;color:{TEXT};border:none;border-radius:12px;font-weight:900;}}"); lay.addWidget(back); self.content_layout.addWidget(page,1); self.manual.setFocus()
         stagger_fade([card,scan,keys,back],start=0,step=90,duration=360)
 
     def keypad(self,value):

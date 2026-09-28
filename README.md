@@ -17,3 +17,12 @@ The release includes a standalone Windows EXE plus an optional source ZIP. The E
 
 ## Kiosk settings
 Use the **Settings** button at the bottom of the kiosk. Sign in with your existing librarian/admin account to change full-screen mode, animations, GitHub update settings, or the station connection. Settings are available between transactions; RFID capture is paused while the settings dialogs are open and restored afterward.
+
+## New in 1.3.0
+- Consistent light theme for kiosk, admin, setup and update dialogs, even when Windows uses dark mode.
+- Redesigned kiosk home with four large service cards and a visible registration entry.
+- Light admin navigation and scrollable pages for smaller screens.
+- Attendance history with Philippine date boundaries, IN/OUT filters, search and CSV export (up to 10,000 records per date range).
+- Page refresh, export-visible-table and overdue-loan shortcuts. CSV exports preserve visible filters and neutralize spreadsheet formulas.
+
+Attendance uses the existing `library_attendance` and `library_members` tables; no schema migration is required.

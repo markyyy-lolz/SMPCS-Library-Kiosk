@@ -11,11 +11,11 @@ class AppChooser(QDialog):
         self.role = None
         self.setWindowTitle('SMPCS Library')
         self.setMinimumSize(720, 460)
-        self.setStyleSheet('''QDialog {background:#F3ECE7;}
+        self.setStyleSheet('''QDialog {background:#F4F7FB;}
             QLabel {color:#192B45; background:transparent; font-family:"Segoe UI";}
-            QPushButton {background:#9B2335; color:white; border:none; border-radius:16px;
+            QPushButton {background:#245DAD; color:white; border:none; border-radius:16px;
             padding:24px; font-size:20px; font-weight:700;}
-            QPushButton:hover {background:#B82C43;} QPushButton:focus {border:3px solid #D99B48;}
+            QPushButton:hover {background:#194A90;} QPushButton:focus {border:3px solid #70A5E6;}
             QPushButton#admin {background:#192B45;} QPushButton#admin:hover {background:#304E72;}''')
         layout=QVBoxLayout(self); layout.setContentsMargins(40,30,40,32); layout.setSpacing(18)
         logo=QLabel(); logo.setAlignment(Qt.AlignmentFlag.AlignCenter)

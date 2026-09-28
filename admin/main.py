@@ -34,6 +34,8 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QVBoxLayout, QWidget
 )
 
+from shared.admin_features import AdminFeatures
+from shared.theme import LIGHT_QSS
 from shared.config import load_config
 from shared.api import SupabaseAPI, ApiError
 from shared.setup import BackendSetup
@@ -41,17 +43,17 @@ from shared.setup import BackendSetup
 # ============================================================
 # THEME  (same palette as the kiosk)
 # ============================================================
-WHITE = "#FFFDFC"
-BACKGROUND = "#F3ECE7"
-TEXT = "#2B2321"
-MUTED = "#84736D"
-MUTED_LIGHT = "#B7A9A2"
-BORDER = "#E7D9D2"
-BANNER_1 = "#FF6B4A"
-BANNER_2 = "#F23B59"
-ACCENT = "#F45142"
-ACCENT_DARK = "#D73B31"
-ACCENT_LIGHT = "#FFF0EB"
+WHITE = "#FFFFFF"
+BACKGROUND = "#F4F7FB"
+TEXT = "#172B46"
+MUTED = "#52647B"
+MUTED_LIGHT = "#65768B"
+BORDER = "#DCE5EF"
+BANNER_1 = "#3177C6"
+BANNER_2 = "#245DAD"
+ACCENT = "#245DAD"
+ACCENT_DARK = "#194A90"
+ACCENT_LIGHT = "#EAF2FF"
 SECONDARY = "#3E82E8"
 SUCCESS = "#1BAA67"
 SUCCESS_BG = "#EAF9F1"
@@ -70,33 +72,33 @@ QMainWindow, QDialog {{ background:{BACKGROUND}; }}
 QWidget {{ font-family:'Segoe UI'; color:{TEXT}; font-size:13px; }}
 QLabel {{ background:transparent; }}
 QLineEdit, QComboBox {{
-    background:#FCFAF8; color:{TEXT}; border:none; border-bottom:3px solid #E8DAD4;
+    background:#FFFFFF; color:{TEXT}; border:none; border-bottom:3px solid #CDD9E7;
     border-radius:10px; padding:0 12px; min-height:44px; font-weight:700;
 }}
 QLineEdit:focus, QComboBox:focus {{ background:white; border-bottom:3px solid {BANNER_2}; }}
-QLineEdit:read-only {{ background:#F5F0EC; color:{BANNER_2}; }}
+QLineEdit:read-only {{ background:#EEF3FA; color:{BANNER_2}; }}
 QComboBox::drop-down {{ border:none; width:30px; }}
 QComboBox QAbstractItemView {{
     background:white; color:{TEXT}; border:1px solid {BORDER};
     selection-background-color:{ACCENT_LIGHT}; selection-color:{ACCENT_DARK}; outline:0;
 }}
 QTableWidget {{
-    background:white; alternate-background-color:#FBF7F4; border:none; gridline-color:transparent;
+    background:white; alternate-background-color:#F3F6FB; border:none; gridline-color:transparent;
     selection-background-color:{ACCENT_LIGHT}; selection-color:{TEXT}; font-size:12px; outline:0;
 }}
-QTableWidget::item {{ padding:4px 10px; border-bottom:1px solid #F1E8E2; }}
+QTableWidget::item {{ padding:4px 10px; border-bottom:1px solid #E3EAF3; }}
 QHeaderView::section {{
-    background:#F7F0EB; color:{MUTED}; border:none; padding:10px; font-size:10px;
+    background:#EAF0F8; color:{MUTED}; border:none; padding:10px; font-size:10px;
     font-weight:900; letter-spacing:1px;
 }}
-QTableCornerButton::section {{ background:#F7F0EB; border:none; }}
+QTableCornerButton::section {{ background:#EAF0F8; border:none; }}
 QScrollArea {{ border:none; background:transparent; }}
 QScrollBar:vertical {{ background:transparent; width:12px; margin:2px; }}
-QScrollBar::handle:vertical {{ background:#DCCFC8; border-radius:5px; min-height:36px; }}
+QScrollBar::handle:vertical {{ background:#CED9E7; border-radius:5px; min-height:36px; }}
 QScrollBar::handle:vertical:hover {{ background:#C9B9B0; }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
 QScrollBar:horizontal {{ background:transparent; height:12px; margin:2px; }}
-QScrollBar::handle:horizontal {{ background:#DCCFC8; border-radius:5px; min-width:36px; }}
+QScrollBar::handle:horizontal {{ background:#CED9E7; border-radius:5px; min-width:36px; }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width:0; }}
 QToolTip {{ background:{NAVY}; color:white; border:none; padding:6px 9px; }}
 QWidget#anInner, QWidget#anViewport {{ background:{BACKGROUND}; }}
@@ -267,8 +269,8 @@ class BannerFrame(QFrame):
         w = float(self.width())
         g = QLinearGradient(0, 0, w, 0)
         g.setColorAt(0.0, QColor(BANNER_2))
-        g.setColorAt(0.6, QColor("#F64757"))
-        g.setColorAt(1.0, QColor("#FF6A4B"))
+        g.setColorAt(0.6, QColor("#2D73BC"))
+        g.setColorAt(1.0, QColor("#3493B8"))
         p.fillRect(self.rect(), QBrush(g))
         cycle = ((clock() - self._t0) % 8.0) / 8.0
         if cycle < 0.55 and MOTION_ENABLED:
@@ -1032,7 +1034,7 @@ class HBarChart(ChartBase):
             bar_h = 14.0
             by = y + (row_h - bar_h) / 2
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor("#F3ECE7"))
+            p.setBrush(QColor("#F4F7FB"))
             p.drawRoundedRect(QRectF(track_x, by, track_w, bar_h), 7, 7)
             ep = clamp01(self._p * 1.35 - i * 0.07)
             bw = track_w * (value / vmax) * ep
@@ -1073,7 +1075,7 @@ class DonutChart(ChartBase):
         thick = size * 0.15
         ring = QRectF(cx - size / 2 + thick / 2, cy - size / 2 + thick / 2, size - thick, size - thick)
         p.setBrush(Qt.BrushStyle.NoBrush)
-        p.setPen(QPen(QColor("#F3ECE7"), thick))
+        p.setPen(QPen(QColor("#F4F7FB"), thick))
         p.drawEllipse(ring)
         total = sum(v for _, v, _ in self.segments)
         if total > 0:
@@ -1125,7 +1127,7 @@ class DonutChart(ChartBase):
 def gradient_header(title, subtitle):
     head = QFrame()
     head.setObjectName("dlgHead")
-    head.setStyleSheet(f"QFrame#dlgHead{{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {BANNER_2},stop:.6 #F64757,stop:1 #FF6A4B);"
+    head.setStyleSheet(f"QFrame#dlgHead{{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {BANNER_2},stop:.6 #2D73BC,stop:1 #3493B8);"
                        f"border-top-left-radius:22px;border-top-right-radius:22px;}}")
     lay = QHBoxLayout(head)
     lay.setContentsMargins(26, 20, 26, 20)
@@ -1300,9 +1302,11 @@ NAV_ITEMS = [
     ("loans", "Loans", "🔄"),
     ("stations", "Kiosk Stations", "🖥"),
     ("printlogs", "Print Logs", "🖨"),
+    ("attendance", "Attendance", "◷"),
     ("logs", "Audit / Logs", "🧾"),
 ]
 PAGE_META = {
+    "attendance": ("Attendance history", "Search RFID visits, filter dates and export attendance records."),
     "dashboard": ("Library Dashboard", "A quick look at your library right now."),
     "approvals": ("Borrow Approvals", "Students who borrowed at the kiosk need your OK before they leave with the book."),
     "members": ("Members", "Register students and staff, and manage their RFID cards."),
@@ -1315,7 +1319,7 @@ PAGE_META = {
 }
 
 
-class AdminWindow(QMainWindow):
+class AdminWindow(QMainWindow, AdminFeatures):
     def __init__(self, api, user):
         super().__init__()
         self.api = api
@@ -1336,7 +1340,9 @@ class AdminWindow(QMainWindow):
         body = QHBoxLayout()
         body.setContentsMargins(20, 18, 20, 18)
         body.setSpacing(18)
-        body.addWidget(self._build_sidebar())
+        side_scroll=QScrollArea(); side_scroll.setWidgetResizable(True); side_scroll.setFixedWidth(264)
+        side_scroll.setFrameShape(QFrame.Shape.NoFrame); side_scroll.setWidget(self._build_sidebar())
+        body.addWidget(side_scroll)
         content = QVBoxLayout()
         content.setSpacing(14)
         self.page_title = QLabel("")
@@ -1348,6 +1354,7 @@ class AdminWindow(QMainWindow):
         head.addWidget(self.page_title)
         head.addWidget(self.page_sub)
         content.addLayout(head)
+        content.addLayout(self.build_quick_tools())
         self.stack = QStackedWidget()
         content.addWidget(self.stack, 1)
         body.addLayout(content, 1)
@@ -1357,7 +1364,7 @@ class AdminWindow(QMainWindow):
         self.pages = {}
         self._refreshers = {}
         self.build_dashboard(); self.build_members(); self.build_books(); self.build_analytics()
-        self.build_loans(); self.build_approvals(); self.build_stations(); self.build_print_logs(); self.build_logs()
+        self.build_loans(); self.build_approvals(); self.build_stations(); self.build_print_logs(); self.build_logs(); self.build_attendance()
         self._clock_timer = QTimer(self)
         self._clock_timer.timeout.connect(self._tick_clock)
         self._clock_timer.start(1000)
@@ -1408,23 +1415,23 @@ class AdminWindow(QMainWindow):
     def _build_sidebar(self):
         side = QFrame()
         side.setObjectName("sidebar")
-        side.setFixedWidth(272)
-        side.setStyleSheet(f"QFrame#sidebar{{background:{NAVY};border-radius:24px;}}")
+        side.setFixedWidth(250)
+        side.setStyleSheet(f"QFrame#sidebar{{background:white;border:1px solid #DCE5EF;border-radius:20px;}}")
         lay = QVBoxLayout(side)
         lay.setContentsMargins(16, 20, 16, 16)
         lay.setSpacing(6)
         cap = QLabel("MENU")
-        cap.setStyleSheet("color:rgba(255,255,255,140);font-size:10px;font-weight:950;letter-spacing:2px;padding-left:10px;background:transparent;")
+        cap.setStyleSheet("color:#52647B;font-size:10px;font-weight:950;letter-spacing:2px;padding-left:10px;background:transparent;")
         lay.addWidget(cap)
         self.nav_buttons = {}
-        style = ("QPushButton{color:rgba(255,255,255,205);background:transparent;border:none;border-left:5px solid transparent;"
-                 "border-radius:14px;text-align:left;padding:0 16px;font-size:14px;font-weight:800;}"
-                 "QPushButton:hover{background:rgba(255,255,255,24);color:white;}"
-                 f"QPushButton:checked{{background:rgba(255,255,255,36);color:white;border-left:5px solid {BANNER_1};}}")
+        style = ("QPushButton{color:#334C6C;background:transparent;border:none;border-left:5px solid transparent;"
+                 "border-radius:14px;text-align:left;padding:0 16px;font-size:13px;font-weight:800;}"
+                 "QPushButton:hover{background:#F0F5FC;color:#172B46;}"
+                 f"QPushButton:checked{{background:#DBEAFE;color:#172B46;border-left:5px solid {BANNER_1};}}")
         for key, label, icon in NAV_ITEMS:
             b = QPushButton(f"{icon}    {label}")
             b.setCheckable(True)
-            b.setMinimumHeight(52)
+            b.setMinimumHeight(42)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setStyleSheet(style)
             b.clicked.connect(lambda _=False, k=key: self.show_page(k))
@@ -1435,20 +1442,20 @@ class AdminWindow(QMainWindow):
         role = str(self.user.get("role") or "LIBRARIAN").upper()
         chip = QFrame()
         chip.setObjectName("userchip")
-        chip.setStyleSheet("QFrame#userchip{background:rgba(255,255,255,20);border-radius:16px;}")
+        chip.setStyleSheet("QFrame#userchip{background:#F0F5FC;border-radius:16px;}")
         cl = QHBoxLayout(chip)
         cl.setContentsMargins(12, 10, 12, 10)
         cl.setSpacing(10)
         av = QLabel(name[:1].upper())
         av.setFixedSize(40, 40)
         av.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        av.setStyleSheet(f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 {BANNER_2},stop:1 {BANNER_1});color:white;border-radius:20px;font-size:16px;font-weight:950;")
+        av.setStyleSheet(f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 {BANNER_2},stop:1 {BANNER_1});color:#172B46;border-radius:20px;font-size:16px;font-weight:950;")
         col = QVBoxLayout()
         col.setSpacing(0)
         n = QLabel(name)
-        n.setStyleSheet("color:white;font-size:13px;font-weight:900;background:transparent;")
+        n.setStyleSheet("color:#172B46;font-size:13px;font-weight:900;background:transparent;")
         r = QLabel(role)
-        r.setStyleSheet("color:rgba(255,255,255,160);font-size:9px;font-weight:900;letter-spacing:1.2px;background:transparent;")
+        r.setStyleSheet("color:#52647B;font-size:9px;font-weight:900;letter-spacing:1.2px;background:transparent;")
         col.addWidget(n)
         col.addWidget(r)
         cl.addWidget(av)
@@ -1457,16 +1464,18 @@ class AdminWindow(QMainWindow):
         out = QPushButton("⏻    Sign out")
         out.setMinimumHeight(48)
         out.setCursor(Qt.CursorShape.PointingHandCursor)
-        out.setStyleSheet("QPushButton{background:rgba(229,72,77,46);color:#FFB4B6;border:none;border-radius:14px;font-size:13px;font-weight:900;}"
-                          "QPushButton:hover{background:#E5484D;color:white;}")
+        out.setStyleSheet("QPushButton{background:rgba(229,72,77,46);color:#A02535;border:none;border-radius:14px;font-size:13px;font-weight:900;}"
+                          "QPushButton:hover{background:#E5484D;color:#172B46;}")
         out.clicked.connect(lambda _=False: self.close())
         lay.addWidget(out)
         return side
 
     def add_page(self, name, widget, refresh):
-        self.pages[name] = widget
+        scroll=QScrollArea(); scroll.setWidgetResizable(True); scroll.setWidget(widget)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.pages[name] = scroll
         self._refreshers[name] = refresh
-        self.stack.addWidget(widget)
+        self.stack.addWidget(scroll)
 
     def show_page(self, name):
         page = self.pages.get(name)
@@ -1477,6 +1486,7 @@ class AdminWindow(QMainWindow):
             b.setChecked(k == name)
         self.page_title.setText(PAGE_META[name][0])
         self.page_sub.setText(PAGE_META[name][1])
+        self.current_page = name
         self.stack.setCurrentWidget(page)
         fade_in(page, 260)
         self._refreshers[name]()
@@ -2370,7 +2380,7 @@ def apply_light_palette(app):
     """Force the light theme even when Windows is in dark mode (otherwise unstyled areas turn black)."""
     pal = QPalette()
     for role, color in ((QPalette.ColorRole.Window, BACKGROUND), (QPalette.ColorRole.WindowText, TEXT),
-                        (QPalette.ColorRole.Base, "#FFFFFF"), (QPalette.ColorRole.AlternateBase, "#FBF7F4"),
+                        (QPalette.ColorRole.Base, "#FFFFFF"), (QPalette.ColorRole.AlternateBase, "#F3F6FB"),
                         (QPalette.ColorRole.Text, TEXT), (QPalette.ColorRole.Button, WHITE),
                         (QPalette.ColorRole.ButtonText, TEXT), (QPalette.ColorRole.ToolTipBase, NAVY),
                         (QPalette.ColorRole.ToolTipText, "#FFFFFF"), (QPalette.ColorRole.Highlight, BANNER_2),
@@ -2386,7 +2396,7 @@ def main(app=None):
     app = app or QApplication.instance() or QApplication(sys.argv)
     app.setStyle("Fusion")
     apply_light_palette(app)
-    app.setStyleSheet(APP_QSS)
+    app.setStyleSheet(LIGHT_QSS + APP_QSS)
     cfg = load_config()
     if not cfg.get("SUPABASE_URL") or not cfg.get("SUPABASE_ANON_KEY"):
         d = BackendSetup(role="admin")

@@ -15,6 +15,8 @@ try:
     from PyQt6.QtWidgets import QApplication
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+    from shared.ui import apply_theme
+    apply_theme(app)
     if role == 'chooser':
         from shared.launcher import AppChooser
         chooser = AppChooser()

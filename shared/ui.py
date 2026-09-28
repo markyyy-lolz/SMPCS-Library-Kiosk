@@ -7,33 +7,11 @@ from PyQt6.QtWidgets import (
     QHeaderView, QStackedWidget
 )
 
-APP_QSS = """
-* { font-family: "Segoe UI"; }
-QWidget { background: #071426; color: #edf4ff; }
-QFrame#card { background: #0e2039; border: 1px solid #1f3b5e; border-radius: 18px; }
-QLabel#title { font-size: 30px; font-weight: 700; }
-QLabel#muted { color: #8fa7c4; }
-QLineEdit, QComboBox {
-  background: #0a192c; border: 1px solid #2a486c; border-radius: 10px;
-  padding: 12px; color: white; min-height: 20px;
-}
-QPushButton {
-  background: #1479ff; border: none; border-radius: 11px; padding: 12px 18px;
-  font-weight: 600; color: white;
-}
-QPushButton:hover { background: #3290ff; }
-QPushButton:disabled { background: #253b56; color: #72849b; }
-QPushButton#secondary { background: #17304d; }
-QPushButton#danger { background: #a8324d; }
-QTableWidget {
-  background: #0a192c; alternate-background-color: #0d2036;
-  gridline-color: #1f3854; border: 1px solid #203d5d;
-}
-QHeaderView::section { background: #112b48; color: #dcecff; padding: 9px; border: none; }
-QMessageBox { background: #0e2039; }
-"""
+from shared.theme import LIGHT_QSS as APP_QSS, force_light_palette
 
 def apply_theme(app):
+    app.setStyle("Fusion")
+    force_light_palette(app)
     app.setStyleSheet(APP_QSS)
 
 def msg(parent, title, text, icon=QMessageBox.Icon.Information):
