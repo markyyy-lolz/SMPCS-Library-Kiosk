@@ -1,0 +1,39 @@
+name: Test and publish release
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'shared/updates.py'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: smpcs-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check source and update logic
+        run: |
+          python -m compileall -q admin kiosk shared launch.pyw scripts
+          python -m unittest discover -s tests -v
+      - name: Package source release
+        run: python scripts/package_release.py
+      - name: Publish new version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(python -c "from shared.updates import VERSION; print(VERSION)")
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists; nothing overwritten."
+            exit 0
+          fi
+          gh release create "v$VERSION" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION" \
+            --notes "Windows Python source package. Extract, run install.bat, then open Start_App.vbs and choose Kiosk or Admin. GitHub update checks are preconfigured. Existing local configuration should be preserved."
