@@ -1,3 +1,9 @@
+# Windows release 1.3.1
+
+Download **SMPCS_Library_Windows_v1.3.1.zip** from GitHub Releases. Extract the entire ZIP and open **SMPCS_Library.exe** inside. Keep the `_internal` folder beside the EXE. No Python installation is needed.
+
+The new package uses an application folder instead of extracting bundled executable files into a temporary folder on every launch. UPX is disabled. This may reduce packaging-related false positives but does not establish the cause of a reported detection. The build remains unsigned. Keep antivirus enabled and read `SCAN_REPORT.txt` for the actual scan outcome. If it is still blocked, provide the antivirus product and exact detection name for investigation.
+
 # Windows EXE release 1.3.0
 
 Download **SMPCS_Library.exe** from GitHub Releases and open it. Choose **Go to Kiosk** or **Go to Admin**. No Python installation is needed. Settings and credentials stay in your Windows profile. The instructions below apply only when running the optional Python source ZIP.

@@ -1,4 +1,4 @@
-"""Build and smoke-test a single windowless Windows executable."""
+"""Build and smoke-test a windowless Windows application folder."""
 from pathlib import Path
 import hashlib
 import json
@@ -6,15 +6,16 @@ import os
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 ROOT=Path(__file__).resolve().parent.parent
 if sys.platform!='win32': raise SystemExit('Build this executable on Windows.')
 os.chdir(ROOT)
-subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onefile',
+subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--noupx',
     '--windowed','--name','SMPCS_Library','--icon','assets/school_logo.png',
     '--add-data','assets:assets','--add-data','update_settings.json:.',
     'launch.pyw'],check=True)
-exe=ROOT/'dist/SMPCS_Library.exe'
+exe=ROOT/'dist/SMPCS_Library/SMPCS_Library.exe'
 import pefile
 pe=pefile.PE(str(exe)); assert pe.OPTIONAL_HEADER.Subsystem==2, 'Executable must have no console'; pe.close()
 with tempfile.TemporaryDirectory() as folder:
@@ -28,6 +29,12 @@ with tempfile.TemporaryDirectory() as folder:
         for log in Path(folder).rglob('*.log'):
             print(log.read_text(errors='replace'))
         raise
-with (ROOT/'dist/SHA256SUMS.txt').open('a',encoding='utf-8') as stream:
-    stream.write(hashlib.sha256(exe.read_bytes()).hexdigest()+'  '+exe.name+'\n')
-print(f'Built and tested {exe.name}: {exe.stat().st_size:,} bytes')
+sys.path.insert(0,str(ROOT))
+from shared.updates import VERSION
+app_folder=exe.parent
+(app_folder/'READ_ME.txt').write_text('Extract the whole ZIP, then open SMPCS_Library.exe. Keep the _internal folder beside the EXE. No Python installation is needed. This build is unsigned; keep antivirus enabled. Settings are stored in your Windows profile.\n')
+archive=ROOT/f'dist/SMPCS_Library_Windows_v{VERSION}.zip'
+with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as package:
+    for path in sorted(app_folder.rglob('*')):
+        if path.is_file():package.write(path,Path(app_folder.name)/path.relative_to(app_folder))
+print(f'Built and tested {archive.name}: {archive.stat().st_size:,} bytes')
