@@ -1,4 +1,4 @@
-name: Test and publish release
+name: Build Windows EXE and publish release
 on:
   push:
     branches: [main]
@@ -13,19 +13,26 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          architecture: x64
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
       - name: Check source and update logic
         run: |
           python -m compileall -q admin kiosk shared launch.pyw scripts
           python -m unittest discover -s tests -v
       - name: Package source release
         run: python scripts/package_release.py
+      - name: Build and test Windows executable
+        run: python scripts/build_windows.py
       - name: Publish new version
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -34,6 +41,6 @@ jobs:
             echo "Release v$VERSION already exists; nothing overwritten."
             exit 0
           fi
-          gh release create "v$VERSION" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt \
-            --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION" \
-            --notes "Windows Python source package. Extract, run install.bat, then open Start_App.vbs and choose Kiosk or Admin. GitHub update checks are preconfigured. Existing local configuration should be preserved."
+          gh release create "v$VERSION" dist/SMPCS_Library.exe "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION — Windows EXE" \
+            --notes "Download SMPCS_Library.exe and double-click it. No Python installation required. Choose Go to Kiosk or Go to Admin. Kiosk settings require staff sign-in. GitHub update checks are preconfigured. Windows 10/11 x64. Source ZIP is optional for developers."

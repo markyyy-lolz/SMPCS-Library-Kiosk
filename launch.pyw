@@ -21,7 +21,10 @@ try:
         if chooser.exec() != chooser.DialogCode.Accepted:
             sys.exit(0)
         role = chooser.role
-    if role == 'updates':
+    if role == '--smoke-test':
+        from shared.smoke_test import run
+        code = run(app, sys.argv[2])
+    elif role == 'updates':
         from PyQt6.QtWidgets import QApplication, QMainWindow
         from shared.updates import attach_updates
         owner = QMainWindow()
@@ -30,15 +33,18 @@ try:
         controller.dialog.finished.connect(app.quit)
         code = app.exec()
     elif role in ('admin', 'kiosk'):
-        from importlib import import_module
-        code = import_module(role + '.main').main(app=app)
+        if role == 'admin':
+            from admin.main import main
+        else:
+            from kiosk.main import main
+        code = main(app=app)
     else:
         raise ValueError('Unknown application: ' + role)
 except Exception:
     traceback.print_exc()
-    if os.name == 'nt':
+    if os.name == 'nt' and role != '--smoke-test':
         ctypes.windll.user32.MessageBoxW(None,
-            'The app could not start. Run install.bat first.\nDetails: %APPDATA%\\SMPCS_Library\\logs',
+            'The app could not start. See the log for details.\nDetails: %APPDATA%\\SMPCS_Library\\logs',
             'SMPCS Library — Startup error', 16)
     code = 1
 sys.exit(code or 0)

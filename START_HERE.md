@@ -1,3 +1,7 @@
+# Windows EXE release 1.2.1
+
+Download **SMPCS_Library.exe** from GitHub Releases and open it. Choose **Go to Kiosk** or **Go to Admin**. No Python installation is needed. Settings and credentials stay in your Windows profile. The instructions below apply only when running the optional Python source ZIP.
+
 # SMPCS Library 1.2.0
 
 ## Start without a terminal
