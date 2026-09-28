@@ -41,5 +41,5 @@ Apply `migrations/002_accounts_services.sql` once in your Supabase project's SQL
 
 The shipped schema is used for isolated PostgreSQL integration tests. Your live Supabase deployment is not modified or tested by this release pipeline. Apply the migration and verify with a test member before regular use.
 
-## v1.5.1 update-access fix
+## v1.5.2 update-access fix
 Updates / Repair is available on the chooser and staff login before authentication. The `updates` launch argument also opens a standalone updater without contacting Supabase. For existing v1.4+ installations locked out by the database migration, place `Open_Updates.vbs` from the release beside the executable and run it, with other copies closed. Database access permissions stay enforced; upgrading the client resolves legacy login calls. Do not rerun migration 002 if already applied.

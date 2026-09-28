@@ -29,6 +29,10 @@ class UpdateAccessTests(unittest.TestCase):
             login.update_btn.click();controller=login.update_controller
             self.assertTrue(controller.dialog.isVisible())
             self.assertIsNone(login.user)
+            self.assertTrue(controller.repo.isReadOnly())
+            self.assertFalse(controller.enabled.isEnabled())
+            controller.repo.setText('untrusted/other-app')
+            self.assertEqual(controller.settings()['repository'],'markyyy-lolz/SMPCS-Library-Kiosk')
             # Regression: dialog parents have no menuBar/statusBar methods.
             ready={'tag':'v9.0.0','repository':cfg['repository'],'archive':'unused','sha256':'unused'}
             controller.events.put(('download',cfg['repository'],False,ready,None));controller.finish()

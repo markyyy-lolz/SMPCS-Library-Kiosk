@@ -33,7 +33,7 @@ try:
         from PyQt6.QtWidgets import QApplication, QMainWindow
         from shared.updates import attach_updates
         owner = QMainWindow()
-        controller = attach_updates(owner)
+        controller = attach_updates(owner, public=True)
         controller.show_settings()
         controller.dialog.finished.connect(app.quit)
         code = app.exec()

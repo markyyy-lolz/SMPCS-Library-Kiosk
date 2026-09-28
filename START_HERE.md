@@ -1,4 +1,4 @@
-# SMPCS Library 1.5.1
+# SMPCS Library 1.5.2
 
 1. Download the Windows ZIP and use **Extract All** once.
 2. Open **SMPCS_Library.exe** and choose Kiosk or Admin.
@@ -26,7 +26,7 @@ New services require the migration. Database changes are not applied by the app 
 
 ## Cannot sign in after the database migration?
 Do not undo the database permissions or reset your password for `permission denied for function library_login`.
-- On 1.5.1 and later, choose **Updates / Repair** on the opening screen or librarian login. No Supabase sign-in is required.
+- On 1.5.2 and later, choose **Updates / Repair** on the opening screen or librarian login. No Supabase sign-in is required.
 - On 1.4.0/1.5.0, close the app, then run `SMPCS_Library.exe updates`. You can also place the release's `Open_Updates.vbs` beside `SMPCS_Library.exe` and double-click it. This only opens the existing updater; no Python or terminal is needed.
 - Choose **Save and check now**, wait for the download, then **Restart & Update**. Close other copies of the old app first.
 - Versions older than 1.4.0 need the current Windows ZIP once.

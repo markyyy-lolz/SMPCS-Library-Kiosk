@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = '1.5.1'
+VERSION = '1.5.2'
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = Path(os.getenv('APPDATA', str(Path.home()))) / 'SMPCS_Library' / 'updates.json'
 
@@ -71,7 +71,7 @@ def fetch_release(repo, opener=urlopen):
             'package_name':name,'package_url':base+'/'+name if name in names and 'SHA256SUMS.txt' in names else '',
             'checksum_url':base+'/SHA256SUMS.txt'}
 
-def attach_updates(window, kiosk=False):
+def attach_updates(window, kiosk=False, public=False):
     import sys
     from PyQt6.QtCore import QObject,QTimer,QThread,Qt
     from PyQt6.QtWidgets import QApplication,QDialog,QVBoxLayout,QLabel,QLineEdit,QCheckBox,QPushButton,QProgressBar
@@ -89,11 +89,15 @@ def attach_updates(window, kiosk=False):
             QTimer.singleShot(4000,self.automatic)
             if not kiosk and hasattr(window,'menuBar'):window.menuBar().addMenu('Updates').addAction('Update settings / Check now',self.show_settings)
 
+        def settings(self):
+            if public:return {'repository':'markyyy-lolz/SMPCS-Library-Kiosk','enabled':True,'auto_download':True}
+            return read_settings()
+
         def notify_status(self,text):
             if hasattr(window,'statusBar'):window.statusBar().showMessage(text)
 
         def automatic(self):
-            cfg=read_settings()
+            cfg=self.settings()
             if cfg['enabled'] and cfg['repository'] and not self.busy:self.check(False)
 
         def refresh(self):
@@ -109,14 +113,17 @@ def attach_updates(window, kiosk=False):
             dlg=self.dialog=QDialog(window);dlg.setStyleSheet(LIGHT_QSS);dlg.resize(620,470)
             dlg.setWindowTitle('SMPCS Library — Automatic Updates')
             layout=QVBoxLayout(dlg);layout.addWidget(QLabel(f'Installed version: {VERSION}'))
-            cfg=read_settings();layout.addWidget(QLabel('GitHub update repository'))
+            cfg=self.settings();layout.addWidget(QLabel('GitHub update repository'))
             self.repo=QLineEdit(cfg['repository']);layout.addWidget(self.repo)
             self.enabled=QCheckBox('Check at startup and every 6 hours');self.enabled.setChecked(cfg['enabled']);layout.addWidget(self.enabled)
+            self.repo.setReadOnly(public)
+            self.enabled.setEnabled(not public)
             self.auto_download=QCheckBox('Automatically download verified Windows updates');self.auto_download.setChecked(cfg['auto_download']);layout.addWidget(self.auto_download)
+            self.auto_download.setEnabled(not public)
             self.label=QLabel(self.last);self.label.setWordWrap(True);self.label.setTextFormat(Qt.TextFormat.PlainText);layout.addWidget(self.label)
             self.progress=QProgressBar();self.progress.setRange(0,100);layout.addWidget(self.progress)
-            save=QPushButton('Save settings');save.clicked.connect(self.save);layout.addWidget(save)
-            self.check_btn=QPushButton('Save and check now');self.check_btn.clicked.connect(self.manual);layout.addWidget(self.check_btn)
+            save=QPushButton('Save settings');save.clicked.connect(self.save);layout.addWidget(save);save.setVisible(not public)
+            self.check_btn=QPushButton('Check for updates' if public else 'Save and check now');self.check_btn.clicked.connect(self.manual);layout.addWidget(self.check_btn)
             self.download_btn=QPushButton('Download update');self.download_btn.clicked.connect(self.download_now);layout.addWidget(self.download_btn)
             self.install_btn=QPushButton('Restart & Update');self.install_btn.clicked.connect(self.install);layout.addWidget(self.install_btn)
             note=QLabel('Your settings are preserved. The current version is kept as a backup.');note.setWordWrap(True);layout.addWidget(note)
@@ -126,6 +133,7 @@ def attach_updates(window, kiosk=False):
             if self.dialog:self.dialog.deleteLater();self.dialog=None
 
         def save(self):
+            if public:return True
             try:
                 repo=normalize_repo(self.repo.text()) if self.repo.text().strip() else ''
                 if repo!=read_settings()['repository']:self.ready=None;self.release=None;self.percent=0
@@ -138,7 +146,7 @@ def attach_updates(window, kiosk=False):
 
         def check(self,manual):
             if self.busy:return
-            repo=read_settings()['repository']
+            repo=self.settings()['repository']
             if not repo:self.last='Enter your GitHub repository first.';self.refresh();return
             self.busy=True;self.last='Checking for updates…';self.refresh()
             def work():
@@ -188,7 +196,7 @@ def attach_updates(window, kiosk=False):
                     for dialog in list(QApplication.instance().topLevelWidgets()):
                         if isinstance(dialog,QDialog):dialog.reject()
                     window.close();QApplication.instance().quit();return
-                cfg=read_settings()
+                cfg=self.settings()
                 if kind=='progress':
                     if cfg['repository']==repo:self.percent=result;self.refresh()
                     continue

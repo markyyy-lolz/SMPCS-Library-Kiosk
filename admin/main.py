@@ -1186,7 +1186,7 @@ class AdminLogin(QDialog):
     def open_login_updates(self):
         from shared.updates import attach_updates
         controller=getattr(self,'update_controller',None)
-        if controller is None:controller=attach_updates(self)
+        if controller is None:controller=attach_updates(self,public=True)
         controller.show_settings()
 
     def _shake(self):
