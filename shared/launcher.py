@@ -32,6 +32,7 @@ class AppChooser(QDialog):
         row.addWidget(kiosk); row.addWidget(admin); layout.addLayout(row)
         note=QLabel('Kiosk: attendance, borrowing and returns\nAdmin: staff sign-in and library management')
         note.setAlignment(Qt.AlignmentFlag.AlignCenter); note.setStyleSheet('font-size:13px;color:#6F727B;'); layout.addWidget(note)
+        updates=QPushButton('Updates / Repair');updates.setStyleSheet('padding:12px;font-size:15px;background:#DCEBFF;color:#194A90;');updates.clicked.connect(lambda:self.choose('updates'));layout.addWidget(updates)
         footer=QLabel(f'Version {VERSION}'); footer.setAlignment(Qt.AlignmentFlag.AlignCenter); layout.addWidget(footer)
 
     def choose(self, role):

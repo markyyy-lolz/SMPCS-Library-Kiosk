@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = '1.5.0'
+VERSION = '1.5.1'
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = Path(os.getenv('APPDATA', str(Path.home()))) / 'SMPCS_Library' / 'updates.json'
 
@@ -87,7 +87,10 @@ def attach_updates(window, kiosk=False):
             self.poll=QTimer(self);self.poll.timeout.connect(self.finish);self.poll.start(150)
             self.schedule=QTimer(self);self.schedule.timeout.connect(self.automatic);self.schedule.start(6*60*60*1000)
             QTimer.singleShot(4000,self.automatic)
-            if not kiosk:window.menuBar().addMenu('Updates').addAction('Update settings / Check now',self.show_settings)
+            if not kiosk and hasattr(window,'menuBar'):window.menuBar().addMenu('Updates').addAction('Update settings / Check now',self.show_settings)
+
+        def notify_status(self,text):
+            if hasattr(window,'statusBar'):window.statusBar().showMessage(text)
 
         def automatic(self):
             cfg=read_settings()
@@ -195,7 +198,7 @@ def attach_updates(window, kiosk=False):
                 if kind=='download':
                     self.ready=result;self.percent=100
                     self.last=f"{result['tag']} downloaded and checksum verified. Click Restart & Update."
-                    window.statusBar().showMessage('Update ready — open Settings → Updates to restart.' if kiosk else self.last)
+                    self.notify_status('Update ready — open Settings → Updates to restart.' if kiosk else self.last)
                     self.refresh()
                     if not kiosk:self.show_settings()
                 elif kind=='check':
@@ -207,6 +210,6 @@ def attach_updates(window, kiosk=False):
                     self.refresh()
                     if cfg['auto_download'] and (cfg['enabled'] or manual) and result.get('package_url'):self.download_now()
                     else:
-                        window.statusBar().showMessage(self.last)
+                        self.notify_status(self.last)
                         if not kiosk:self.show_settings()
     controller=Controller();window.update_controller=controller;return controller

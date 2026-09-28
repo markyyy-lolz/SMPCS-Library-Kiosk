@@ -36,6 +36,8 @@ app_folder=exe.parent
 (app_folder/'READ_ME.txt').write_text('Extract the whole ZIP, then open SMPCS_Library.exe. Keep the _internal folder beside the EXE. No Python installation is needed. This build is unsigned; keep antivirus enabled. Settings are stored in your Windows profile.\n')
 shutil.copytree(ROOT/'migrations',app_folder/'migrations',dirs_exist_ok=True)
 shutil.copy2(ROOT/'START_HERE.md',app_folder/'START_HERE.md')
+shutil.copy2(ROOT/'Open_Updates.vbs',app_folder/'Open_Updates.vbs')
+shutil.copy2(ROOT/'Open_Updates.vbs',ROOT/'dist/Open_Updates.vbs')
 shutil.copy2(ROOT/'migrations/002_accounts_services.sql',ROOT/'dist/002_accounts_services.sql')
 archive=ROOT/f'dist/SMPCS_Library_Windows_v{VERSION}.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as package:

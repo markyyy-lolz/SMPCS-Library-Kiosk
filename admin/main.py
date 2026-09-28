@@ -1177,9 +1177,17 @@ class AdminLogin(QDialog):
         lay.addWidget(self.err)
         lay.addSpacing(4)
         lay.addWidget(self.btn)
+        self.update_btn=make_button("UPDATES / REPAIR — NO SIGN-IN NEEDED",self.open_login_updates,"secondary",42)
+        lay.addWidget(self.update_btn)
         outer.addWidget(body)
         self.u.returnPressed.connect(self.p.setFocus)
         self.p.returnPressed.connect(self.login)
+
+    def open_login_updates(self):
+        from shared.updates import attach_updates
+        controller=getattr(self,'update_controller',None)
+        if controller is None:controller=attach_updates(self)
+        controller.show_settings()
 
     def _shake(self):
         base = self.pos()
@@ -1210,7 +1218,10 @@ class AdminLogin(QDialog):
             self.p.clear()
             self.accept()
         except Exception as e:  # noqa: BLE001
-            self.err.setText(str(e))
+            detail=str(e)
+            if 'permission denied for function library_login' in detail:
+                detail='This database requires a newer app. Click UPDATES / REPAIR below; no sign-in is needed.'
+            self.err.setText(detail)
             self.p.selectAll()
             self.p.setFocus()
             self._shake()

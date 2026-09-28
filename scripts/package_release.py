@@ -11,7 +11,7 @@ from shared.updates import VERSION
 assert re.fullmatch(r'\d+\.\d+\.\d+', VERSION)
 files = ['README.md', 'START_HERE.md', '.env.example', 'requirements.txt',
          'install.bat', 'run_admin.bat', 'run_kiosk.bat', 'launch.pyw',
-         'Start_App.vbs', 'Start_Admin.vbs', 'Start_Kiosk.vbs', 'Update_Settings.vbs',
+         'Open_Updates.vbs', 'Start_App.vbs', 'Start_Admin.vbs', 'Start_Kiosk.vbs', 'Update_Settings.vbs',
          'update_settings.json', 'SMPCS_LIBRARY_FULL_DATABASE.sql', 'assets/school_logo.png']
 for folder in ('admin', 'kiosk', 'shared', 'tests'):
     files += [str(p.relative_to(ROOT)).replace('\\', '/') for p in (ROOT/folder).rglob('*.py')]
