@@ -125,7 +125,7 @@ begin
  result=jsonb_build_object('ok',true);
  elsif p_action='backup' then
  if u.role<>'admin' then raise exception 'Administrator access required'; end if;
- return jsonb_build_object('format','SMPCS operational backup v1','created_at',now(),'members',(select coalesce(jsonb_agg(m),'[]') from library_members m),'books',(select coalesce(jsonb_agg(b),'[]') from library_books b),'loans',(select coalesce(jsonb_agg(l),'[]') from library_loans l),'attendance',(select coalesce(jsonb_agg(a),'[]') from library_attendance a),'return_requests',(select coalesce(jsonb_agg(r),'[]') from library_return_requests r));
+ return jsonb_build_object('format','SMPCS operational backup v1','created_at',now(),'members',(select coalesce(jsonb_agg(m),'[]') from library_members m),'books',(select coalesce(jsonb_agg(book_row),'[]') from library_books book_row),'loans',(select coalesce(jsonb_agg(l),'[]') from library_loans l),'attendance',(select coalesce(jsonb_agg(a),'[]') from library_attendance a),'return_requests',(select coalesce(jsonb_agg(r),'[]') from library_return_requests r));
  else raise exception 'Unknown action'; end if;
  insert into library_audit_log(actor_username,action,entity_type,entity_id) values(u.username,p_action,'account/service',coalesce(rid,mid,req.id)::text);
  return result;

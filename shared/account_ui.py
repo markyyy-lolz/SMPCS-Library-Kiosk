@@ -93,8 +93,8 @@ def backup_dialog(host):
 def kiosk_account(host):
     if not host.member or host.busy:return
     host.busy=True;host.mode='account';host.rfid.buffer='';host.rfid.timer.stop();QApplication.instance().removeEventFilter(host.rfid)
-    rfid=host.member.get('rfid_uid','');user={};d,lay=dialog(host,'My library account');d.resize(880,640)
-    name=QLabel('Enter your PIN. Ask the librarian to set one if you do not have one.');name.setWordWrap(True);lay.addWidget(name)
+    rfid=host.member.get('rfid_uid','');user={};d,lay=dialog(host,'My library account');d.resize(900,720)
+    name=QLabel('Enter your PIN. Ask the librarian to set one if you do not have one.');name.setWordWrap(True);name.setMinimumHeight(90);lay.addWidget(name)
     pin=QLineEdit();pin.setEchoMode(QLineEdit.EchoMode.Password);pin.setPlaceholderText('Library PIN');lay.addWidget(pin)
     pad=QHBoxLayout();lay.addLayout(pad)
     focus=[pin]
@@ -102,7 +102,7 @@ def kiosk_account(host):
     for digit in '1234567890':
         b=button(pad,digit,lambda _=False,n=digit:type_digit(n));b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
     b=button(pad,'⌫',lambda:focus[0].backspace());b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-    t=table(lay,['Book','Status','Due date','Overdue'])
+    t=table(lay,['Book','Status','Due date','Overdue']);t.setMaximumHeight(240)
     current=QLineEdit();current.setEchoMode(QLineEdit.EchoMode.Password);current.setPlaceholderText('Current PIN');lay.addWidget(current);current.hide()
     new=QLineEdit();new.setEchoMode(QLineEdit.EchoMode.Password);new.setPlaceholderText('New PIN: 6–12 digits');lay.addWidget(new);new.hide()
     repeat=QLineEdit();repeat.setEchoMode(QLineEdit.EchoMode.Password);repeat.setPlaceholderText('Repeat new PIN');lay.addWidget(repeat);repeat.hide()
@@ -112,7 +112,12 @@ def kiosk_account(host):
     def show_profile(data):
         member=data['member'];loans=data['loans'];overdue=sum(bool(r.get('overdue')) for r in loans)
         name.setText(f"{member.get('full_name','')} • {member.get('member_no','')}\nGrade / section: {member.get('grade_level','')} {member.get('section','')}\n{overdue} overdue book(s). Please proceed to the librarian for profile or RFID corrections.")
-        fill(t,loans,['title','status','due_at','overdue'])
+        from datetime import datetime,timezone,timedelta
+        for row in loans:
+            row['overdue_label']='Yes — please return' if row.get('overdue') else 'No'
+            try:row['due_label']=datetime.fromisoformat(row['due_at'].replace('Z','+00:00')).astimezone(timezone(timedelta(hours=8))).strftime('%b %d, %Y')
+            except (ValueError,TypeError,KeyError):row['due_label']=str(row.get('due_at',''))
+        fill(t,loans,['title','status','due_label','overdue_label'])
     def signed(result):
         user.update(result);pin.clear();pin.hide();signin.hide()
         focus[0]=current
