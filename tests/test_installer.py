@@ -10,7 +10,10 @@ class InstallerTests(unittest.TestCase):
         with zipfile.ZipFile(path,'w') as z:
             z.writestr('SMPCS_Library/SMPCS_Library.exe',b'example')
             z.writestr('SMPCS_Library/_internal/example.dll',b'library')
-            if extra:z.writestr(extra,b'bad')
+            if extra:
+                entry=zipfile.ZipInfo()
+                entry.filename=extra  # Preserve malformed separators on Windows too.
+                z.writestr(entry,b'bad')
         return path
     def test_hash_and_extract(self):
         with tempfile.TemporaryDirectory() as root:
@@ -22,7 +25,7 @@ class InstallerTests(unittest.TestCase):
             self.assertFalse((Path(root)/'wrong').exists())
     def test_reject_unsafe_zip_paths(self):
         for name in ('../outside','SMPCS_Library/../../outside','/absolute','SMPCS_Library/x:ads','SMPCS_Library/CON','SMPCS_Library//duplicate','SMPCS_Library/bad\\file'):
-            with tempfile.TemporaryDirectory() as root:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as root:
                 with self.assertRaises(ValueError):validate_archive(self.archive(root,name))
     def test_rollback_and_preserve_config(self):
         with tempfile.TemporaryDirectory() as root:

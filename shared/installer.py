@@ -66,7 +66,8 @@ def validate_archive(archive):
         if len(files)>10000 or sum(f.file_size for f in files)>MAX_EXPANDED:raise ValueError('Update archive is too large.')
         seen=set()
         for entry in files:
-            name=entry.filename
+            name=entry.orig_filename
+            if name!=entry.filename:raise ValueError('Noncanonical path in update archive.')
             parts=PurePosixPath(name).parts
             if PurePosixPath(name).as_posix()!=name.rstrip('/') or not parts or parts[0]!='SMPCS_Library' or '\\' in name or ':' in name or any(p in ('.','..') or p.endswith((' ','.')) for p in parts):
                 raise ValueError('Unsafe path in update archive.')

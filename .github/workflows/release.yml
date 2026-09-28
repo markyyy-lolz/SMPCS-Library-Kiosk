@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'shared/updates.py'
+      - 'shared/installer.py'
+      - 'tests/**'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 permissions:
