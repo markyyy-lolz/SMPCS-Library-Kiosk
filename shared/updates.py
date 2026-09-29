@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = '1.5.3'
+VERSION = '1.5.4'
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = Path(os.getenv('APPDATA', str(Path.home()))) / 'SMPCS_Library' / 'updates.json'
 
@@ -69,14 +69,16 @@ def fetch_release(repo, opener=urlopen):
     base=f'https://github.com/{repo}/releases/download/{tag}'
     return {'newer':newer,'tag':tag,'repository':repo,'url':f'https://github.com/{repo}/releases/latest',
             'package_name':name,'package_url':base+'/'+name if name in names and 'SHA256SUMS.txt' in names else '',
-            'checksum_url':base+'/SHA256SUMS.txt'}
+            'checksum_url':base+'/SHA256SUMS.txt',
+            'notes':data.get('body','')[:20000] if isinstance(data.get('body'),str) else ''}
 
 def attach_updates(window, kiosk=False, public=False):
     import sys
     from PyQt6.QtCore import QObject,QTimer,QThread,Qt
-    from PyQt6.QtWidgets import QApplication,QDialog,QVBoxLayout,QLabel,QLineEdit,QCheckBox,QPushButton,QProgressBar
+    from PyQt6.QtWidgets import QApplication,QDialog,QVBoxLayout,QLabel,QLineEdit,QCheckBox,QPushButton,QProgressBar,QPlainTextEdit,QHBoxLayout
     from shared.installer import stage_release,prepare_helper
     from shared.theme import LIGHT_QSS
+    from shared.changelog import CURRENT_CHANGES
 
     class Controller(QObject):
         def __init__(self):
@@ -104,15 +106,22 @@ def attach_updates(window, kiosk=False, public=False):
             if self.dialog:
                 self.label.setText(self.last)
                 self.progress.setValue(self.percent)
+                tag=self.release['tag'] if self.release else 'v'+VERSION
+                notes=self.release.get('notes','').strip() if self.release else CURRENT_CHANGES
+                self.notes_title.setText("What's new — "+tag)
+                text=notes or 'No release notes were provided for this version.'
+                if self.notes.toPlainText()!=text:self.notes.setPlainText(text)
                 self.install_btn.setEnabled(bool(self.ready) and not self.busy)
                 self.download_btn.setEnabled(bool(self.release and self.release.get('package_url')) and not self.busy and not self.ready)
                 self.check_btn.setEnabled(not self.busy)
 
         def show_settings(self):
             if self.dialog:self.dialog.show();self.dialog.raise_();return
-            dlg=self.dialog=QDialog(window);dlg.setStyleSheet(LIGHT_QSS);dlg.resize(620,470)
+            dlg=self.dialog=QDialog(window);dlg.setStyleSheet(LIGHT_QSS);dlg.resize(720,680)
             dlg.setWindowTitle('SMPCS Library — Automatic Updates')
             layout=QVBoxLayout(dlg);layout.addWidget(QLabel(f'Installed version: {VERSION}'))
+            self.notes_title=QLabel("What's new");self.notes_title.setStyleSheet('font-size:19px;font-weight:700;color:#214C83;');layout.addWidget(self.notes_title)
+            self.notes=QPlainTextEdit();self.notes.setReadOnly(True);self.notes.setMinimumHeight(160);self.notes.setStyleSheet('background:white;color:#254160;border:1px solid #DDE6F1;border-radius:10px;padding:12px;font-size:13px;');layout.addWidget(self.notes,1)
             cfg=self.settings();layout.addWidget(QLabel('GitHub update repository'))
             self.repo=QLineEdit(cfg['repository']);layout.addWidget(self.repo)
             self.enabled=QCheckBox('Check at startup and every 6 hours');self.enabled.setChecked(cfg['enabled']);layout.addWidget(self.enabled)
@@ -123,9 +132,10 @@ def attach_updates(window, kiosk=False, public=False):
             self.label=QLabel(self.last);self.label.setWordWrap(True);self.label.setTextFormat(Qt.TextFormat.PlainText);layout.addWidget(self.label)
             self.progress=QProgressBar();self.progress.setRange(0,100);layout.addWidget(self.progress)
             save=QPushButton('Save settings');save.clicked.connect(self.save);layout.addWidget(save);save.setVisible(not public)
-            self.check_btn=QPushButton('Check for updates' if public else 'Save and check now');self.check_btn.clicked.connect(self.manual);layout.addWidget(self.check_btn)
-            self.download_btn=QPushButton('Download update');self.download_btn.clicked.connect(self.download_now);layout.addWidget(self.download_btn)
-            self.install_btn=QPushButton('Restart & Update');self.install_btn.clicked.connect(self.install);layout.addWidget(self.install_btn)
+            actions=QHBoxLayout();layout.addLayout(actions)
+            self.check_btn=QPushButton('Check for updates' if public else 'Save and check now');self.check_btn.clicked.connect(self.manual);actions.addWidget(self.check_btn)
+            self.download_btn=QPushButton('Download update');self.download_btn.clicked.connect(self.download_now);actions.addWidget(self.download_btn)
+            self.install_btn=QPushButton('Restart & Update');self.install_btn.clicked.connect(self.install);actions.addWidget(self.install_btn)
             note=QLabel('Your settings are preserved. The current version is kept as a backup.');note.setWordWrap(True);layout.addWidget(note)
             dlg.finished.connect(self.closed);self.refresh();dlg.show()
 

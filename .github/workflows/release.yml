@@ -69,6 +69,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip freeze | Out-File -Encoding utf8 dist/BUILD_DEPENDENCIES.txt
+          python scripts/release_notes.py
           python scripts/release_checksums.py
       - name: Publish new version
         shell: bash
@@ -82,4 +83,4 @@ jobs:
           fi
           gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt dist/002_accounts_services.sql dist/Open_Updates.vbs \
             --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION — Windows EXE" \
-            --notes "Windows 10/11 x64. Existing v1.4+ installations can use Updates / Repair and Restart & Update. v1.5.3 fixes the attendance member identifier query without a new SQL migration. My Account now separates borrowing history from Change PIN, adds history search/status filters, and groups controls with a persistent sign-out footer. Admin account and service dialogs have improved spacing and placements. The original blue kiosk home remains. Extract the entire Windows ZIP for first installation and keep _internal beside the EXE. See SCAN_REPORT.txt and SHA256SUMS.txt. Existing accounts/services require migration 002 only if it was never applied. The app is unsigned."
+            --notes-file dist/RELEASE_NOTES.md

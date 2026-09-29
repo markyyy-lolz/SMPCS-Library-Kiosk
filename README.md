@@ -49,3 +49,6 @@ Updates / Repair is available on the chooser and staff login before authenticati
 - Account dialogs use compact forms and grouped action rows. Admin Accounts & Services uses a two-column card layout.
 - Attendance joins the canonical member_no field; a targeted fallback supports older student_id-only schemas. No database migration is needed. Error messages appear above the records, and failed refreshes clear stale table contents.
 - Layout checked at 940×680 and 760×540 logical pixels; smaller security pages scroll while sign-out stays visible.
+
+## v1.5.4 — account styling and update notes
+The account screen has a blue profile header, separate summary cards, balanced table columns and colored loan status badges. Updates / Repair now shows What's new for the installed version offline and retrieves the available release's notes when checking GitHub. No new SQL migration is required. Users on older versions get the in-app notes panel after installing v1.5.4.

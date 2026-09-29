@@ -29,6 +29,11 @@ class UpdateAccessTests(unittest.TestCase):
             login.update_btn.click();controller=login.update_controller
             self.assertTrue(controller.dialog.isVisible())
             self.assertIsNone(login.user)
+            self.assertIn('MY ACCOUNT',controller.notes.toPlainText())
+            controller.release={'tag':'v9.0.0','notes':'• New display layout'}
+            controller.refresh()
+            self.assertEqual(controller.notes.toPlainText(),'• New display layout')
+            self.assertIn('v9.0.0',controller.notes_title.text())
             self.assertTrue(controller.repo.isReadOnly())
             self.assertFalse(controller.enabled.isEnabled())
             controller.repo.setText('untrusted/other-app')

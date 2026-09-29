@@ -1,6 +1,6 @@
 """Light blue account and library service dialogs."""
 from PyQt6.QtCore import Qt,QTimer,QRegularExpression
-from PyQt6.QtGui import QRegularExpressionValidator
+from PyQt6.QtGui import QRegularExpressionValidator,QColor
 from PyQt6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QFormLayout,QLineEdit,QLabel,QPushButton,QComboBox,QCheckBox,QTableWidget,QTableWidgetItem,QHeaderView,QMessageBox,QFileDialog,QApplication,QWidget,QStackedWidget,QTabWidget,QScrollArea,QFrame,QGridLayout)
 from shared.services import login,account,save_backup,Outbox
 from shared.config import APP_DIR
@@ -93,17 +93,38 @@ def backup_dialog(host):
         if folder:task(host,d,lambda:save_backup(host.api,host.user,folder),lambda path:QMessageBox.information(d,'Backup saved',path))
     actions=QHBoxLayout();actions.addStretch();lay.addLayout(actions);button(actions,'Close',d.reject);button(actions,'Create backup in folder…',save);d.exec()
 
+ACCOUNT_STYLE = STYLE + """
+QDialog{background:#F1F5FA;}
+QFrame#profileBanner{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #103F86,stop:1 #2677CD);border-radius:16px;}
+QTabWidget::pane{background:white;border:none;border-radius:14px;}
+QTabBar::tab{background:transparent;color:#60758D;padding:13px 22px;border-bottom:3px solid transparent;}
+QTabBar::tab:selected{background:transparent;color:#195BB2;border-bottom:3px solid #2677CD;font-weight:700;}
+QTableWidget{background:white;border:none;padding:0;selection-background-color:#EDF4FF;selection-color:#173D68;}
+QHeaderView::section{background:#F4F7FB;color:#71849B;padding:10px 14px;border:none;font-size:11px;font-weight:600;}
+QTableWidget::item{padding:0 12px;border-bottom:1px solid #EDF1F6;color:#254160;}
+QPushButton{background:#2467C5;border-radius:10px;padding:11px 17px;}
+QLineEdit,QComboBox{border:1px solid #DEE6F0;border-radius:10px;padding:10px;background:#FAFCFF;}
+QComboBox::drop-down{border:none;width:26px;}
+QScrollBar:vertical{background:#F4F7FB;width:8px;margin:0;border-radius:4px;}
+QScrollBar::handle:vertical{background:#C6D5E7;min-height:28px;border-radius:4px;}
+QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{height:0;}
+"""
+
 class AccountDialog(QDialog):
     """Touch-friendly account pages with a separate security form."""
     def __init__(self,host):
         super().__init__(host)
         self.host=host;self.user={};self.loans=[];self.rfid=host.member.get('rfid_uid','')
-        self.setWindowTitle('My library account');self.setStyleSheet(STYLE)
+        self.setWindowTitle('My library account');self.setStyleSheet(ACCOUNT_STYLE)
         size=QApplication.primaryScreen().availableGeometry()
         self.resize(min(940,size.width()-40),min(700,size.height()-60))
         root=QVBoxLayout(self);root.setContentsMargins(22,18,22,18);root.setSpacing(12)
-        self.heading=QLabel('My library account');self.heading.setTextFormat(Qt.TextFormat.PlainText);self.heading.setWordWrap(True);self.heading.setStyleSheet('font-size:24px;font-weight:700;color:#183D6B;');root.addWidget(self.heading)
-        self.identity=QLabel('Verify your school card with your library PIN.');self.identity.setWordWrap(True);self.identity.setTextFormat(Qt.TextFormat.PlainText);root.addWidget(self.identity)
+        banner=QFrame();banner.setObjectName('profileBanner');header=QHBoxLayout(banner);header.setContentsMargins(22,18,22,18);header.setSpacing(16)
+        self.avatar=QLabel('ID');self.avatar.setFixedSize(58,58);self.avatar.setAlignment(Qt.AlignmentFlag.AlignCenter);self.avatar.setStyleSheet('background:#4785CE;color:white;border-radius:18px;font-size:23px;font-weight:700;');header.addWidget(self.avatar)
+        details=QVBoxLayout();details.setSpacing(5)
+        caption=QLabel('MY LIBRARY');caption.setStyleSheet('color:#BDD9FA;font-size:10px;font-weight:700;letter-spacing:2px;');details.addWidget(caption)
+        self.heading=QLabel('My library account');self.heading.setTextFormat(Qt.TextFormat.PlainText);self.heading.setWordWrap(True);self.heading.setStyleSheet('font-size:23px;font-weight:700;color:white;');details.addWidget(self.heading)
+        self.identity=QLabel('Verify your school card with your library PIN.');self.identity.setWordWrap(True);self.identity.setTextFormat(Qt.TextFormat.PlainText);self.identity.setStyleSheet('color:#D2E6FF;font-size:12px;');details.addWidget(self.identity);header.addLayout(details,1);root.addWidget(banner)
         self.pages=QStackedWidget();root.addWidget(self.pages,1)
         signin_page=QWidget();signin_lay=QVBoxLayout(signin_page);signin_lay.setContentsMargins(0,8,0,8);signin_lay.setSpacing(12)
         signin_lay.addStretch()
@@ -116,14 +137,21 @@ class AccountDialog(QDialog):
         signin_lay.addWidget(entry,0,Qt.AlignmentFlag.AlignHCenter);signin_lay.addStretch();self.pages.addWidget(signin_page)
         self.tabs=QTabWidget();self.pages.addWidget(self.tabs)
         history=QWidget();hist=QVBoxLayout(history);hist.setContentsMargins(14,14,14,14);hist.setSpacing(10)
-        self.summary=QLabel('Loading your borrowing history…');self.summary.setWordWrap(True);self.summary.setStyleSheet('background:#E4EEFF;padding:12px;border-radius:8px;font-weight:600;');hist.addWidget(self.summary)
+        cards=QHBoxLayout();cards.setSpacing(12);self.stat_values=[]
+        for title,color in [('ON LOAN','#2467C5'),('OVERDUE','#C96628'),('RECENT RECORDS','#526C89')]:
+            card=QFrame();card.setStyleSheet('QFrame{background:#F5F8FD;border-radius:12px;}');col=QVBoxLayout(card);col.setContentsMargins(16,12,16,12);col.setSpacing(3)
+            value=QLabel('—');value.setStyleSheet(f'color:{color};font-size:27px;font-weight:700;');label=QLabel(title);label.setStyleSheet('color:#788AA0;font-size:10px;font-weight:700;letter-spacing:.8px;');col.addWidget(value);col.addWidget(label);cards.addWidget(card,1);self.stat_values.append(value)
+        hist.addLayout(cards)
+        self.summary=QLabel('Loading borrowing history…');self.summary.setStyleSheet('font-size:12px;color:#647C97;');hist.addWidget(self.summary)
         filters=QHBoxLayout();self.search=QLineEdit();self.search.setPlaceholderText('Search book title…');filters.addWidget(self.search,1)
         self.filter=QComboBox();self.filter.addItems(['All loans','Currently borrowed','Overdue','Returned','Cancelled']);filters.addWidget(self.filter)
         button(filters,'Refresh',self.refresh_profile);hist.addLayout(filters)
         self.history=table(hist,['Book','Status','Due date','Overdue']);hist.setStretchFactor(self.history,1)
-        self.history.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
-        for col in range(1,4):self.history.horizontalHeader().setSectionResizeMode(col,QHeaderView.ResizeMode.ResizeToContents)
-        self.history.setWordWrap(True);self.history.setAlternatingRowColors(True)
+        self.history.setShowGrid(False);self.history.setAlternatingRowColors(False)
+        self.history.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+        self.history.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        self.history.verticalHeader().setDefaultSectionSize(56)
+        self.history.setWordWrap(False)
         self.result_count=QLabel('');hist.addWidget(self.result_count)
         self.tabs.addTab(history,'Borrowing history')
         security=QWidget();sec=QVBoxLayout(security);sec.setContentsMargins(18,18,18,18);sec.setSpacing(12)
@@ -181,6 +209,7 @@ class AccountDialog(QDialog):
         from datetime import datetime,timezone,timedelta
         m=data['member'];self.loans=[dict(r) for r in data['loans']]
         self.heading.setText(str(m.get('full_name') or 'My library account'))
+        self.avatar.setText(''.join(p[:1] for p in str(m.get('full_name') or 'Library Member').split()[:2]).upper())
         self.identity.setText('Member '+str(m.get('member_no') or m.get('student_id') or '—')+'  •  '+' / '.join(str(m.get(k) or '—') for k in ('grade_level','section')))
         for row in self.loans:
             row['status_label']=str(row.get('status') or '').replace('_',' ').title()
@@ -188,14 +217,34 @@ class AccountDialog(QDialog):
             try:row['due_label']=datetime.fromisoformat(row['due_at'].replace('Z','+00:00')).astimezone(timezone(timedelta(hours=8))).strftime('%b %d, %Y')
             except (ValueError,TypeError,KeyError):row['due_label']=str(row.get('due_at') or '—')
         borrowed=sum(r.get('status')=='borrowed' for r in self.loans);overdue=sum(bool(r.get('overdue')) for r in self.loans)
-        self.summary.setText(f'{borrowed} currently borrowed   •   {overdue} overdue   •   {len(self.loans)} recent records')
+        for label,value in zip(self.stat_values,(borrowed,overdue,len(self.loans))):label.setText(str(value))
+        self.summary.setText('Please return overdue books to the librarian.' if overdue else 'Your recent borrowing activity')
         self.filter_history()
 
     def filter_history(self,*_):
         query=self.search.text().strip().casefold();choice=self.filter.currentText()
         rows=[r for r in self.loans if query in str(r.get('title','')).casefold() and (choice=='All loans' or choice=='Overdue' and r.get('overdue') or r.get('status')=={'Currently borrowed':'borrowed','Returned':'returned','Cancelled':'cancelled'}.get(choice,'__none__'))]
-        fill(self.history,rows,['title','status_label','due_label','overdue_label']);self.history.resizeRowsToContents()
+        fill(self.history,rows,['title','status_label','due_label','overdue_label'])
+        palette={'borrowed':('#E9F1FF','#2467C5'),'returned':('#E7F5EF','#287D59'),'cancelled':('#F0F2F5','#768599'),'lost':('#FDECEC','#B64848')}
+        for i,row in enumerate(rows):
+            bg,fg=palette.get(row.get('status'),('#F0F2F5','#60768E'))
+            self.history.item(i,1).setText('')
+            badge=QLabel(row['status_label']);badge.setFixedHeight(28);badge.setToolTip(row['status_label']);badge.setAlignment(Qt.AlignmentFlag.AlignCenter);badge.setStyleSheet(f'background:{bg};color:{fg};border-radius:9px;padding:5px 9px;font-size:11px;font-weight:600;')
+            cell=QWidget();line=QHBoxLayout(cell);line.setContentsMargins(8,0,8,0);line.addWidget(badge);line.addStretch();self.history.setCellWidget(i,1,cell)
+            if row.get('overdue'):self.history.item(i,3).setForeground(QColor('#BA5C28'))
+            for c in range(4):self.history.item(i,c).setToolTip(self.history.item(i,c).text())
+            self.history.setRowHeight(i,56)
+        self.balance_columns()
         self.result_count.setText(f'{len(rows)} records shown • Most recent 200 loans maximum' if rows else 'No borrowing records match this view.')
+
+    def balance_columns(self):
+        width=max(self.history.viewport().width(),480)
+        proportions=(.43,.20,.22,.15)
+        for column,fraction in enumerate(proportions):self.history.setColumnWidth(column,int(width*fraction))
+
+    def resizeEvent(self,event):
+        super().resizeEvent(event)
+        if hasattr(self,'history'):QTimer.singleShot(0,self.balance_columns)
 
     def change_pin(self):
         if len(self.new.text())<6:QMessageBox.warning(self,'PIN','Use 6–12 digits for your new PIN.');return

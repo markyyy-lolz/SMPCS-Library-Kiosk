@@ -1,4 +1,4 @@
-# SMPCS Library 1.5.3
+# SMPCS Library 1.5.4
 
 1. Download the Windows ZIP and use **Extract All** once.
 2. Open **SMPCS_Library.exe** and choose Kiosk or Admin.
@@ -36,3 +36,6 @@ The database migration is not needed again if it has already been applied.
 Use Updates / Repair → Check for updates → Restart & Update. No new SQL migration is needed for this release.
 My Account now has separate Borrowing history and Change PIN tabs. The history page includes title search, status filters and summary counts; the PIN keypad appears only on PIN screens. Dialog controls are grouped and tables use the available space.
 Attendance uses the existing member_no column and supports legacy student_id-only schemas. Load failures appear above the table with a retry instruction.
+
+## v1.5.4 — account styling and update notes
+The account screen has a blue profile header, separate summary cards, balanced table columns and colored loan status badges. Updates / Repair now shows What's new for the installed version offline and retrieves the available release's notes when checking GitHub. No new SQL migration is required. Users on older versions get the in-app notes panel after installing v1.5.4.

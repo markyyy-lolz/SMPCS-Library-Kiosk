@@ -31,6 +31,11 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.release('v2.0.0', draft=True)
         with self.assertRaises(ValueError): self.release('v2.0.0', prerelease=True)
 
+    def test_release_notes_are_bounded_and_optional(self):
+        self.assertEqual(self.release('v2.0.0',body='New account layout')['notes'],'New account layout')
+        self.assertEqual(self.release('v2.0.0',body=None)['notes'],'')
+        self.assertEqual(len(self.release('v2.0.0',body='x'*30000)['notes']),20000)
+
     def test_repo_validation(self):
         self.assertEqual(updates.normalize_repo(' https://github.com/school/library.git/ '), 'school/library')
         for bad in ('https://evil.test/school/library', 'school/library/releases', '../repo', 'school/repo?x=1'):
