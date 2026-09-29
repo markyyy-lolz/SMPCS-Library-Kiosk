@@ -353,6 +353,7 @@ class Card(QFrame):
             col.addWidget(t)
             if subtitle:
                 s = QLabel(subtitle)
+                s.setWordWrap(True)
                 s.setStyleSheet(f"color:{MUTED};font-size:11px;font-weight:650;background:transparent;")
                 col.addWidget(s)
             self.header.addLayout(col)
@@ -1686,10 +1687,17 @@ class AdminWindow(QMainWindow, AdminFeatures):
     # ---------------------------------------------------------------- books
     def build_accounts(self):
         from shared.account_ui import staff_accounts,return_requests,backup_dialog,member_access
-        page=QWidget();lay=QVBoxLayout(page)
-        for text,fn in [('Staff accounts',lambda:staff_accounts(self)),('Member access / PIN',lambda:(self.show_page('members'),member_access(self))),('Pending book returns',lambda:return_requests(self)),('Backups',lambda:backup_dialog(self))]:
-            b=make_button(text,fn,height=52);lay.addWidget(b)
-            if text in ('Staff accounts','Backups'):b.setEnabled(self.user.get('role')=='admin')
+        page=QWidget();lay=QVBoxLayout(page);lay.setContentsMargins(0,0,0,0);lay.setSpacing(16)
+        grid=QGridLayout();grid.setSpacing(16)
+        items=[('Staff accounts','Create staff logins, assign roles and reset passwords.',lambda:staff_accounts(self),True),
+               ('Member access / PIN','Select a member to manage access and library PIN.',lambda:self.show_page('members'),False),
+               ('Pending book returns','Confirm returned books after receiving them at the desk.',lambda:return_requests(self),False),
+               ('Backups','Save and locate your operational records backups.',lambda:backup_dialog(self),True)]
+        for i,(title,description,fn,admin_only) in enumerate(items):
+            card=Card(title,description)
+            b=make_button('Open '+title.lower(),fn,height=44);b.setEnabled(not admin_only or self.user.get('role')=='admin');card.lay.addWidget(b)
+            grid.addWidget(card,i//2,i%2)
+        grid.setColumnStretch(0,1);grid.setColumnStretch(1,1);lay.addLayout(grid)
         self.backup_status=QLabel('');self.backup_status.setWordWrap(True);lay.addWidget(self.backup_status);lay.addStretch()
         if not self.user.get('token'):self.backup_status.setText('New services need the v1.5 database migration: migrations/002_accounts_services.sql. Existing pages remain available.')
         self.add_page('accounts',page,lambda:None)

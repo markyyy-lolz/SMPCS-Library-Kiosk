@@ -1,4 +1,4 @@
-# SMPCS Library 1.5.2
+# SMPCS Library 1.5.3
 
 1. Download the Windows ZIP and use **Extract All** once.
 2. Open **SMPCS_Library.exe** and choose Kiosk or Admin.
@@ -31,3 +31,8 @@ Do not undo the database permissions or reset your password for `permission deni
 - Choose **Save and check now**, wait for the download, then **Restart & Update**. Close other copies of the old app first.
 - Versions older than 1.4.0 need the current Windows ZIP once.
 The database migration is not needed again if it has already been applied.
+
+## v1.5.3 layout and attendance fix
+Use Updates / Repair → Check for updates → Restart & Update. No new SQL migration is needed for this release.
+My Account now has separate Borrowing history and Change PIN tabs. The history page includes title search, status filters and summary counts; the PIN keypad appears only on PIN screens. Dialog controls are grouped and tables use the available space.
+Attendance uses the existing member_no column and supports legacy student_id-only schemas. Load failures appear above the table with a retry instruction.

@@ -43,3 +43,9 @@ The shipped schema is used for isolated PostgreSQL integration tests. Your live 
 
 ## v1.5.2 update-access fix
 Updates / Repair is available on the chooser and staff login before authentication. The `updates` launch argument also opens a standalone updater without contacting Supabase. For existing v1.4+ installations locked out by the database migration, place `Open_Updates.vbs` from the release beside the executable and run it, with other copies closed. Database access permissions stay enforced; upgrading the client resolves legacy login calls. Do not rerun migration 002 if already applied.
+
+## v1.5.3 layout and attendance fix
+- Separate account history and PIN pages, a 3×4 touch keypad, searchable/filterable history and a persistent sign-out footer.
+- Account dialogs use compact forms and grouped action rows. Admin Accounts & Services uses a two-column card layout.
+- Attendance joins the canonical member_no field; a targeted fallback supports older student_id-only schemas. No database migration is needed. Error messages appear above the records, and failed refreshes clear stale table contents.
+- Layout checked at 940×680 and 760×540 logical pixels; smaller security pages scroll while sign-out stays visible.

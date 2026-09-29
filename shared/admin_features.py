@@ -9,13 +9,30 @@ def csv_cell(value):
     value=str(value)
     return "'"+value if value.lstrip().startswith(('=','+','-','@')) else value
 
-def attendance_query(start,end):
+def attendance_query(start,end,member_field="member_no"):
+    if member_field not in ('member_no','student_id'):raise ValueError('Unsupported member identifier.')
     if start>end: raise ValueError('The start date must be on or before the end date.')
     tz=timezone(timedelta(hours=8))
     lo=datetime.combine(start,datetime.min.time(),tz).isoformat()
     hi=datetime.combine(end+timedelta(days=1),datetime.min.time(),tz).isoformat()
-    return ('?select=id,action,scanned_at,station_code,library_members(full_name,student_id,grade_level,section)'
+    return (f'?select=id,action,scanned_at,station_code,library_members(full_name,{member_field},grade_level,section)'
             +'&scanned_at=gte.'+quote(lo,safe='')+'&scanned_at=lt.'+quote(hi,safe='')+'&order=scanned_at.desc,id.desc')
+
+def load_attendance(api,start,end):
+    """Canonical member_no; support older installations with student_id only."""
+    from shared.api import ApiError
+    for field in ('member_no','student_id'):
+        query=attendance_query(start,end,field);rows=[]
+        try:
+            while len(rows)<10000:
+                batch=api.select('library_attendance',query+f'&limit=500&offset={len(rows)}') or []
+                rows.extend(batch)
+                if len(batch)<500:break
+            return rows
+        except ApiError as exc:
+            detail=str(exc).lower()
+            if field=='member_no' and 'member_no' in detail and ('does not exist' in detail or '42703' in detail):continue
+            raise
 
 class AdminFeatures:
     def build_quick_tools(self):
@@ -62,9 +79,9 @@ class AdminFeatures:
             field.setCalendarPopup(True); field.setDisplayFormat('MMM dd, yyyy'); row.addWidget(QLabel(label)); row.addWidget(field)
         self.att_action=QComboBox(); self.att_action.addItems(['All actions','IN','OUT']); row.addWidget(self.att_action)
         row.addWidget(make_button('Load records',self.refresh_attendance,'secondary',42)); card.lay.addLayout(row)
-        self.att_search=search_box('Search member, student ID, section or station…'); card.lay.addWidget(self.att_search)
-        self.att_table=make_table(['Member','Student ID','Grade / Section','Action','Time (PH)','Station'],280); self.att_table.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeMode.ResizeToContents); card.lay.addWidget(self.att_table)
-        self.att_summary=QLabel('Select dates and load records.'); card.lay.addWidget(self.att_summary)
+        self.att_search=search_box('Search member, member number, section or station…'); card.lay.addWidget(self.att_search)
+        self.att_summary=QLabel('Select dates and load records.');self.att_summary.setWordWrap(True);card.lay.addWidget(self.att_summary)
+        self.att_table=make_table(['Member','Member number','Grade / Section','Action','Time (PH)','Station'],280); self.att_table.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeMode.ResizeToContents); card.lay.addWidget(self.att_table)
         layout.addWidget(card); self._attendance_rows=[]; self._attendance_generation=0; self._attendance_capped=False
         self.att_search.textChanged.connect(self.apply_attendance_filters); self.att_action.currentIndexChanged.connect(self.apply_attendance_filters)
         self.add_page('attendance',page,self.refresh_attendance)
@@ -74,28 +91,27 @@ class AdminFeatures:
         try: query=attendance_query(self.att_from.date().toPyDate(),self.att_to.date().toPyDate())
         except ValueError as exc: msg(self,'Date range',str(exc),'warning'); return
         self._attendance_generation+=1; generation=self._attendance_generation
-        self.att_summary.setText('Loading attendance…')
-        def job():
-            rows=[]
-            while len(rows)<10000:
-                batch=self.api.select('library_attendance',query+f'&limit=500&offset={len(rows)}') or []
-                rows.extend(batch)
-                if len(batch)<500: break
-            return rows
+        self.att_summary.setStyleSheet('color:#254A78;padding:10px;background:#EAF1FC;border-radius:8px;')
+        self.att_summary.setText('Loading attendance…');self.att_table.setRowCount(0);self._attendance_rows=[]
+        start=self.att_from.date().toPyDate();end=self.att_to.date().toPyDate()
+        def job():return load_attendance(self.api,start,end)
         def ok(rows):
             if generation!=self._attendance_generation:return
+            self.att_table.show()
             self._attendance_capped=len(rows)>=10000; self._attendance_rows=[]
             for r in rows:
                 member=r.get('library_members') or {}
                 if isinstance(member,list):member=member[0] if member else {}
                 try: timestamp=datetime.fromisoformat(r['scanned_at'].replace('Z','+00:00')).astimezone(timezone(timedelta(hours=8))).strftime('%b %d, %Y  %I:%M %p')
                 except (ValueError,KeyError,TypeError):timestamp=str(r.get('scanned_at') or '')
-                self._attendance_rows.append({'name':member.get('full_name') or 'Unknown member','student_id':member.get('student_id') or '',
+                self._attendance_rows.append({'name':member.get('full_name') or 'Unknown member','student_id':member.get('member_no') or member.get('student_id') or '',
                     'grade':' / '.join(str(member.get(k) or '') for k in ('grade_level','section')),'action':r.get('action') or '',
                     'time':timestamp,'station':r.get('station_code') or ''})
             self.apply_attendance_filters()
         def error(exc):
-            if generation==self._attendance_generation:self.att_summary.setText('Could not load attendance. '+str(exc))
+            if generation==self._attendance_generation:
+                self.att_table.hide();self.att_summary.setStyleSheet('color:#A52C3A;padding:12px;background:#FFF0F1;border-radius:8px;')
+                self.att_summary.setText('Could not load attendance. '+str(exc)+'\nUse Load records to retry.')
         self.load(job,ok,error)
 
     def apply_attendance_filters(self,*_):
