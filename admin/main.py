@@ -2483,8 +2483,10 @@ def main(app=None):
         return 0
     win = AdminWindow(api, login.user)
     from shared.updates import attach_updates
-    attach_updates(win)
+    controller = attach_updates(win)
     win.showMaximized()
+    from shared.whats_new import attach_admin_whats_new
+    attach_admin_whats_new(win, controller)
     return app.exec()
 
 
