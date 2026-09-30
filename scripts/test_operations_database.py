@@ -105,6 +105,12 @@ with psycopg.connect(url,autocommit=True) as db:
             except psycopg.Error:return None
     with ThreadPoolExecutor(2) as pool:results=list(pool.map(lambda _:borrow_once(),range(2)))
     assert sum(x is not None for x in results)==1
+    active_loan=next(x['id'] for x in results if x is not None)
+    suite('incident',{'loan_id':active_loan,'type':'lost','message':'Lost book assessment'})
+    assert any(x['status']=='lost' for x in op('clearance',t=mt)['loans'])
+    op('resolve_lost',{'id':active_loan,'resolution':'found','reason':'Recovered at desk'})
+    assert not op('clearance',t=mt)['loans']
+    assert db.execute('select condition from library_copies where id=%s',(copies[0]['id'],)).fetchone()[0]=='quarantine'
     # Merges require current preview; preserve source identity for audit.
     dup=str(db.execute("insert into library_members(member_no,full_name) values('OPS2','Corrected Name') returning id").fetchone()[0])
     preview=op('merge_preview',{'kind':'Member','source':dup,'target':mid});assert op('duplicates')

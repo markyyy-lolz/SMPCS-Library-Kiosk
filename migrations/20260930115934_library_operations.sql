@@ -271,6 +271,14 @@ begin
  elsif p_action in ('verify_loan','reject_loan') then
  update library_loans set verified_at=case when p_action='verify_loan' then now() else verified_at end,status=case when p_action='reject_loan' then 'cancelled' else status end where id=(p_data->>'id')::uuid and status='borrowed' and verified_at is null returning book_id into b;
  if not found then raise exception 'Request already reviewed';end if;perform library_private.stock(b);perform library_private.queue();
+ elsif p_action='resolve_lost' then
+ if length(trim(coalesce(p_data->>'reason','')))<3 or coalesce(p_data->>'resolution','') not in ('found','written_off') then raise exception 'Choose a resolution and provide a reason';end if;
+ select to_jsonb(l),l.copy_id,l.book_id into old,rid,b from library_loans l where l.id=(p_data->>'id')::uuid and l.status='lost' for update;
+ if not found then raise exception 'Select an unresolved lost loan';end if;
+ update library_copies set condition=case when p_data->>'resolution'='found' then 'quarantine' else 'retired' end,needs_verification=true,notes=concat_ws(' | ',notes,p_data->>'reason') where id=rid;
+ update library_loans set status=case when p_data->>'resolution'='found' then 'returned' else 'cancelled' end,returned_at=now(),returned_by=u.username,notes=concat_ws(' | ',notes,'Lost resolution: '||(p_data->>'resolution')||' — '||(p_data->>'reason')) where id=(p_data->>'id')::uuid;
+ update library_service_requests set status='resolved',reviewed_at=now(),reviewed_by=u.id,data=data||jsonb_build_object('staff_note',p_data->>'reason') where loan_id=(p_data->>'id')::uuid and kind='incident' and status='pending';
+ perform library_private.stock(b);perform library_private.queue();
  elsif p_action='duplicates' then
  return (select coalesce(jsonb_agg(x),'[]') from (select 'Member' kind,lower(trim(full_name)) match,array_agg(id order by member_no) ids,string_agg(member_no,', ' order by member_no) records from library_members where merged_into is null group by lower(trim(full_name)) having count(*)>1 union all select 'Book',lower(trim(title))||' / '||lower(coalesce(author,'')),array_agg(id order by accession_no),string_agg(accession_no,', ' order by accession_no) from library_books where merged_into is null group by lower(trim(title)),lower(coalesce(author,'')) having count(*)>1) x);
  elsif p_action in ('merge_preview','merge') then

@@ -91,7 +91,14 @@ def copies(host,book_id=None):
         else:picker(host,d,'Book',lambda b:selected_book(b['id']))
     def history(d,t,refresh):
         r=selected(t)
-        if r:listing(host,'Copy history',['Member','Borrowed','Due','Returned','Status'],['full_name','borrowed_at','due_at','returned_at','status'],'copy_history',data={'id':r['id']})
+        def resolve(h,history_table,reload):
+            loan=selected(history_table)
+            if not loan or loan.get('status')!='lost':QMessageBox.information(h,'Lost loan','Select an unresolved lost loan.');return
+            def save(v,f):
+                if confirm(f,'Resolve this lost loan? Found copies stay quarantined for inspection. Written-off copies are retired. This also resolves linked incident requests.'):
+                    call(host,f,'resolve_lost',{'id':loan['id'],**v},lambda _:(f.accept(),reload(),refresh()))
+            form(h,'Resolve lost copy',[('resolution','Resolution','found',['found','written_off']),('reason','Assessment / reason','','notes')],save)
+        if r:listing(host,'Copy history',['Member','Borrowed','Due','Returned','Status'],['full_name','borrowed_at','due_at','returned_at','status'],'copy_history',[('Resolve lost loan',resolve,True)],data={'id':r['id']})
     def labels(d,t,refresh):
         rows=[t.item(i.row(),0).data(Qt.ItemDataRole.UserRole) for i in t.selectionModel().selectedRows()]
         if not rows:return
