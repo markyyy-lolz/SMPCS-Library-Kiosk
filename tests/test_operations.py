@@ -28,3 +28,23 @@ class OperationsTests(unittest.TestCase):
         name,data=StaffAPI(API(),{'token':'staff'}).rpc('library_verify_loan',{'p_loan_id':'loan'})
         self.assertEqual(name,'library_operations');self.assertEqual(data['p_data'],{'id':'loan'})
         self.assertEqual(data['p_action'],'verify_loan')
+
+    def test_scheduled_install_waits_for_idle_and_safe_screen(self):
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QApplication,QMainWindow,QDialog
+        from PyQt6.QtCore import QObject,QCoreApplication,QEvent
+        from shared.update_schedule import attach
+        app=QApplication.instance() or QApplication([]);window=QMainWindow()
+        class Controller(QObject):
+            def __init__(self):super().__init__(window);self.ready={'tag':'v9.0.0'};self.busy=False;self.installed=0
+            def install(self):self.installed+=1
+        controller=Controller();scheduler=attach(controller,window);cfg={'enabled':True,'start':'17:00','end':'19:00'}
+        with patch('shared.update_schedule.read',return_value=cfg),patch('shared.update_schedule.write'),patch('shared.update_schedule.in_window',return_value=True),patch('shared.update_schedule.time.monotonic',return_value=1000):
+            scheduler.last_activity=900;scheduler.tick();self.assertEqual(controller.installed,0)
+            scheduler.last_activity=0;window.member={'id':'member'};scheduler.tick();self.assertEqual(controller.installed,0)
+            window.member=None;window.current_page='books';scheduler.tick();self.assertEqual(controller.installed,0)
+            window.current_page='dashboard';window.busy=True;scheduler.tick();self.assertEqual(controller.installed,0)
+            window.busy=False;d=QDialog(window);d.show();scheduler.tick();self.assertEqual(controller.installed,0);d.hide()
+            scheduler.tick();self.assertEqual(controller.installed,1)
+            scheduler.tick();self.assertEqual(controller.installed,1)
+        scheduler.timer.stop();window.deleteLater();QCoreApplication.sendPostedEvents(None,QEvent.Type.DeferredDelete)

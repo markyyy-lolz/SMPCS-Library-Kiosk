@@ -239,7 +239,7 @@ begin
  cap=coalesce((select value::int from library_settings where key='capacity'),50);
  if (p_data->>'seats')::int>cap then raise exception 'Booking exceeds library capacity';end if;
  if (p_data->>'ends_at')::timestamptz<=(p_data->>'starts_at')::timestamptz or (p_data->>'starts_at')::timestamptz<now() then raise exception 'Choose a future start and later end';end if;
- if exists(select 1 from generate_series((p_data->>'starts_at')::timestamptz at time zone 'Asia/Manila',(p_data->>'ends_at')::timestamptz at time zone 'Asia/Manila',interval '1 day') d where library_private.open_date(d::date)<>d::date) then raise exception 'Booking overlaps a closed date';end if;
+ if exists(select 1 from generate_series(((p_data->>'starts_at')::timestamptz at time zone 'Asia/Manila')::date,(((p_data->>'ends_at')::timestamptz-interval '1 microsecond') at time zone 'Asia/Manila')::date,interval '1 day') d where library_private.open_date(d::date)<>d::date) then raise exception 'Booking overlaps a closed date';end if;
  if exists(select 1 from library_class_visits where status='booked' and tstzrange(starts_at,ends_at,'[)') && tstzrange((p_data->>'starts_at')::timestamptz,(p_data->>'ends_at')::timestamptz,'[)')) then raise exception 'This time overlaps an existing class visit';end if;
  insert into library_class_visits(section,teacher,starts_at,ends_at,seats,created_by) values(p_data->>'section',p_data->>'teacher',(p_data->>'starts_at')::timestamptz,(p_data->>'ends_at')::timestamptz,(p_data->>'seats')::int,u.id) returning id into rid;
  elsif p_action='visit_cancel' then update library_class_visits set status='cancelled' where id=(p_data->>'id')::uuid;

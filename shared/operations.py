@@ -9,7 +9,10 @@ def operations(api,user,action,data=None):
         raise
 
 def station_operations(host,action,data=None):
-    return host.api.rpc('library_operations_station',{'p_station':host.cfg['STATION_CODE'],'p_token':host.cfg['STATION_TOKEN'],'p_action':action,'p_data':data or {}})
+    try:return host.api.rpc('library_operations_station',{'p_station':host.cfg['STATION_CODE'],'p_token':host.cfg['STATION_TOKEN'],'p_action':action,'p_data':data or {}})
+    except ApiError as exc:
+        if 'PGRST202' in str(exc) or 'Could not find the function' in str(exc):raise ApiError('Ask the administrator to finish the v1.7 database setup before borrowing: '+MIGRATION) from exc
+        raise
 
 def labels_pdf(path,copies):
     from reportlab.pdfgen import canvas

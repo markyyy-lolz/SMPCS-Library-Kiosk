@@ -41,6 +41,8 @@ def attach(controller,window,public=False):
             cfg=read();now=datetime.now()
             if public or not cfg.get('enabled') or not controller.ready or controller.busy or not in_window(now,cfg['start'],cfg['end']):return
             if time.monotonic()-self.last_activity<300 or getattr(window,'member',None) is not None or getattr(window,'busy',False):return
+            if getattr(window,'current_page','dashboard') not in ('dashboard','services'):return
+            if getattr(window,'pending_action',None) is not None:return
             if QApplication.activeModalWidget() or any(isinstance(w,QDialog) and w.isVisible() for w in QApplication.topLevelWidgets()):return
             if any(t.isRunning() for t in window.findChildren(QThread)):return
             attempt=now.date().isoformat()+':'+str(controller.ready.get('tag'))
@@ -52,7 +54,7 @@ def attach(controller,window,public=False):
         def settings(self):
             d,l=dialog(window,'Scheduled updates');cfg=read();enabled=QCheckBox('Install downloaded updates automatically while idle');enabled.setChecked(cfg.get('enabled',False));l.addWidget(enabled)
             l.addWidget(QLabel('Maintenance window — this computer’s local time (24-hour HH:MM)'));start=QLineEdit(cfg['start']);end=QLineEdit(cfg['end']);l.addWidget(QLabel('Start'));l.addWidget(start);l.addWidget(QLabel('End'));l.addWidget(end)
-            note=QLabel('The app must be open and idle for 5 minutes. Active members, dialogs and database work postpone installation. The app restarts after the verified update is prepared. Enable automatic downloading in Update settings.');note.setWordWrap(True);l.addWidget(note)
+            note=QLabel('The app must be open and idle for 5 minutes. Leave Admin on Dashboard / Library Services or Kiosk on Home. Active members, dialogs and database work postpone installation. The app restarts after the verified update is prepared. Enable automatic downloading in Update settings.');note.setWordWrap(True);l.addWidget(note)
             def save():
                 try:write({'enabled':enabled.isChecked(),'start':start.text().strip(),'end':end.text().strip()})
                 except (OSError,ValueError) as exc:QMessageBox.warning(d,'Schedule not saved',str(exc));return

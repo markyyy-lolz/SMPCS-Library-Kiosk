@@ -279,8 +279,16 @@ def build_center(host):
     items=[('Notifications','Overdue books and pending requests.',notifications,False),('Requests','Registrations, reservations, renewals and feedback.',requests_dialog,False),('Member management','Search, access, PINs, RFID replacement and school-year promotion.',member_tools,False),('Import records','Preview CSV / Excel and add members or books.',import_dialog,True),('Catalog details','Book covers and shelf locations.',book_details,False),('Announcements','Publish notices and control maintenance mode.',announcements,False),('Reports & receipts','Date filters, PDF / Excel, lost and damaged books.',reports,False),('Inventory','Record shelf scans and review missing or misplaced books.',inventory,False),('Backup & restore','Local snapshots and server recovery points.',backups,True),('Diagnostics','Copy an app report without credentials or member data.',diagnostic_dialog,False)]
     from shared.operations_ui import add_operations
     add_operations(host,items)
+    service_search=QLineEdit();service_search.setPlaceholderText("Find a service: copies, accounts, bookings, updates…");layout.addWidget(service_search)
+    service_cards=[]
     for i,(title,description,fn,admin) in enumerate(items):
-        card=Card(title,description);card.header.setStretch(0,1);card.header.setStretch(1,0);b=make_button('Open',lambda _=False,f=fn:f(host),height=40);b.setEnabled(not admin or host.user.get('role')=='admin');card.lay.addWidget(b);grid.addWidget(card,i//2,i%2)
+        card=Card(title,description);card.header.setStretch(0,1);card.header.setStretch(1,0);b=make_button('Open',lambda _=False,f=fn:f(host),height=40);b.setEnabled(not admin or host.user.get('role')=='admin');card.lay.addWidget(b);grid.addWidget(card,i//2,i%2);service_cards.append((card,(title+" "+description).casefold()))
+    def filter_services():
+        query=service_search.text().casefold();position=0
+        for card,text in service_cards:
+            grid.removeWidget(card);card.setVisible(query in text)
+            if query in text:grid.addWidget(card,position//2,position%2);position+=1
+    service_search.textChanged.connect(filter_services)
     grid.setColumnStretch(0,1);grid.setColumnStretch(1,1);scroll.setWidget(body);layout.addWidget(scroll);host.add_page('services',page,lambda:None)
     host.notification_button=QPushButton('Notifications');host.notification_button.clicked.connect(lambda:notifications(host));host.statusBar().addPermanentWidget(host.notification_button)
     timer=QTimer(host);timer.setInterval(60000);busy=[False]

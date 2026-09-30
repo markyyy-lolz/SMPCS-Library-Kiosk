@@ -2433,6 +2433,8 @@ class Kiosk(QMainWindow):
     # ========================================================
     def show_home(self):
         self.member=None; self.mode="member"; self.manual=None; self.pending_action=None; self.clear_content()
+        from shared.accessibility import accessible_home
+        if accessible_home(self):return
         page=QFrame(); page.setStyleSheet(f"QFrame{{background:{BACKGROUND};border:none;}}")
         outer=QVBoxLayout(page); outer.setContentsMargins(0,0,0,0); outer.setSpacing(12)
         nav=QFrame(); nav.setFixedHeight(48); nav.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:16px;}}"); nl=QHBoxLayout(nav); nl.setContentsMargins(14,7,14,7); nl.setSpacing(9)

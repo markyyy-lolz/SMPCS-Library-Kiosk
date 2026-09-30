@@ -13,6 +13,7 @@ ROOT=Path(__file__).resolve().parent.parent
 if sys.platform!='win32': raise SystemExit('Build this executable on Windows.')
 os.chdir(ROOT)
 subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--noupx',
+    '--collect-submodules','reportlab.graphics.barcode',
     '--windowed','--name','SMPCS_Library','--icon','assets/school_logo.png',
     '--add-data','assets:assets','--add-data','update_settings.json:.',
     'launch.pyw'],check=True)
