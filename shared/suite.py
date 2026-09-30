@@ -29,7 +29,10 @@ class StaffAPI:
     def __init__(self, api, user): self.api, self.user = api, user
     def __getattr__(self, name): return getattr(self.api, name)
     def rpc(self, name, params=None):
-        if name in ('library_save_book','library_verify_loan','library_reject_loan','library_register_station'):
+        if name in ('library_verify_loan','library_reject_loan'):
+            from shared.operations import operations
+            return operations(self.api,self.user,'verify_loan' if name=='library_verify_loan' else 'reject_loan',{'id':(params or {}).get('p_loan_id')})
+        if name in ('library_save_book','library_register_station'):
             return self.api.rpc('library_staff_rpc', {'p_token':self.user.get('token',''), 'p_name':name, 'p_args':params or {}})
         return self.api.rpc(name, params)
 

@@ -13,6 +13,7 @@ ROOT=Path(__file__).resolve().parent.parent
 if sys.platform!='win32': raise SystemExit('Build this executable on Windows.')
 os.chdir(ROOT)
 subprocess.run([sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--noupx',
+    '--collect-submodules','reportlab.graphics.barcode',
     '--windowed','--name','SMPCS_Library','--icon','assets/school_logo.png',
     '--add-data','assets:assets','--add-data','update_settings.json:.',
     'launch.pyw'],check=True)
@@ -39,7 +40,7 @@ shutil.copy2(ROOT/'START_HERE.md',app_folder/'START_HERE.md')
 shutil.copy2(ROOT/'Open_Updates.vbs',app_folder/'Open_Updates.vbs')
 shutil.copy2(ROOT/'Open_Updates.vbs',ROOT/'dist/Open_Updates.vbs')
 shutil.copy2(ROOT/'migrations/002_accounts_services.sql',ROOT/'dist/002_accounts_services.sql')
-shutil.copy2(ROOT/'migrations/003_library_suite.sql',ROOT/'dist/003_library_suite.sql')
+for migration in (ROOT/'migrations').glob('*.sql'):shutil.copy2(migration,ROOT/'dist'/migration.name)
 archive=ROOT/f'dist/SMPCS_Library_Windows_v{VERSION}.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as package:
     for path in sorted(app_folder.rglob('*')):

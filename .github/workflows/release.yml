@@ -1,13 +1,13 @@
 name: Build Windows EXE and publish release
 on:
   push:
-    branches: [main, feature/library-suite]
+    branches: [main, feature/library-suite, feature/library-operations]
     paths:
       - 'shared/updates.py'
       - 'shared/installer.py'
       - 'tests/**'
       - 'migrations/**'
-      - 'scripts/test_database.py'
+      - 'scripts/test*database.py'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 permissions:
@@ -42,6 +42,7 @@ jobs:
         run: |
           python scripts/test_database.py
           python scripts/test_suite_database.py
+          python scripts/test_operations_database.py
   release:
     needs: database-tests
     runs-on: windows-latest
@@ -80,7 +81,7 @@ jobs:
           path: |
             dist/SMPCS_Library_Windows_*.zip
             dist/SMPCS_Library_v*.zip
-            dist/003_library_suite.sql
+            dist/*library*.sql
             dist/SHA256SUMS.txt
             dist/SCAN_REPORT.txt
           retention-days: 14
@@ -95,6 +96,6 @@ jobs:
             echo "Release v$VERSION already exists; nothing overwritten."
             exit 0
           fi
-          gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt dist/002_accounts_services.sql dist/003_library_suite.sql dist/Open_Updates.vbs \
+          gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt dist/002_accounts_services.sql dist/003_library_suite.sql dist/20260930115934_library_operations.sql dist/Open_Updates.vbs \
             --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION — Windows EXE" \
             --notes-file dist/RELEASE_NOTES.md

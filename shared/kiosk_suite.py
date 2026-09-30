@@ -54,6 +54,8 @@ def attach_account(dialog):
         if index==2:catalog()
         elif index==3:load_requests()
     dialog.tabs.currentChanged.connect(changed)
+    from shared.operations_ui import attach_member
+    attach_member(dialog)
 
 
 class AccountTimeout(QObject):
@@ -72,6 +74,8 @@ class AccountTimeout(QObject):
 class KioskStatus(QObject):
     def __init__(self,host):
         super().__init__(host);self.host=host;self.busy=False;self.maintenance=False;self.member_since=None
+        from shared.accessibility import Accessibility
+        host.accessibility=Accessibility(host)
         self.banner=QLabel();self.banner.setWordWrap(True);self.banner.setTextFormat(Qt.TextFormat.PlainText);self.banner.setStyleSheet('background:#DBEAFE;color:#174476;padding:10px 18px;font-size:13px;');self.banner.hide();host.main_layout.insertWidget(1,self.banner)
         self.timer=QTimer(self);self.timer.timeout.connect(self.refresh);self.timer.start(30000);QTimer.singleShot(1000,self.refresh)
         self.privacy=QTimer(self);self.privacy.timeout.connect(self.tick);self.privacy.start(1000)

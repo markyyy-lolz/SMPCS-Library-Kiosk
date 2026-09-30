@@ -19,6 +19,8 @@ def run(app, result_path):
     with tempfile.TemporaryDirectory() as folder:
         for ext in ('pdf','xlsx'):
             path=Path(folder)/('smoke.'+ext);export_rows(str(path),['Field','Value'],[['Book','Build test']]);assert path.stat().st_size>0
+        from shared.operations import labels_pdf
+        labels_pdf(Path(folder)/'labels.pdf',[{'title':'Build test','accession':'TEST-001','shelf':'A1'}])
     if __import__('os').name=='nt':
         assert SILENT_IMAGE_PRINT_AVAILABLE, 'Windows image-print dependencies missing'
     chooser=AppChooser(); chooser.show()

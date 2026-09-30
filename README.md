@@ -1,3 +1,17 @@
+## v1.7.0 setup — library operations
+
+Before using this version, take a full database backup. Apply `migrations/20260930115934_library_operations.sql` in Supabase SQL Editor **after** migrations 002 and 003, then update every kiosk and sign in again. This migration retires the old book-level borrowing endpoint, so coordinate the app update with the database change.
+
+In **Admin → Library Services → Physical copies & repairs**, check each migrated copy against the actual book and its existing loan, enter its unique accession/RFID, and confirm verification. Copies stay unavailable until verified. Do not add new copies to represent books already counted in the old catalog. Add/retire individual copies here instead of changing catalog totals.
+
+The Services center includes school calendar, borrowing rules, clearance, reservation pickups, acquisition/correction approvals, reading lists, occupancy, class bookings, duplicate merge preview, handover notes and daily closing. Member functions are under **My Account → Library services**. Reservations become ready automatically during normal application refreshes; the deadline is 17:00 Philippine time on the next open date at least two calendar days away. A librarian confirms actual handover.
+
+**Updates → Schedule installation** optionally installs downloaded updates during your chosen maintenance window (computer local time). Keep startup checks and automatic downloads enabled. The app must remain open and idle for five minutes; active members, dialogs and database jobs postpone the restart. Automatic installation does not apply SQL migrations.
+
+Labels export as PDF; print at 100% / Actual size. QR and Code128 encode each copy's accession. Voice guidance uses an installed system voice and reads generic instructions only.
+
+Operational v3 backups include copies and new workflow tables, and restore by ID in the same configured database. They exclude staff/password/PIN/station credentials and schema. Restore older operational backups into a separate pre-v1.7 database and migrate that database; do not apply old migrations on top of this version. Keep a full database backup for recovery.
+
 # SMPCS Library Kiosk
 
 Blue-themed RFID library kiosk and staff administration for SMPCS.
