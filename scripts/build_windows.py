@@ -39,6 +39,7 @@ shutil.copy2(ROOT/'START_HERE.md',app_folder/'START_HERE.md')
 shutil.copy2(ROOT/'Open_Updates.vbs',app_folder/'Open_Updates.vbs')
 shutil.copy2(ROOT/'Open_Updates.vbs',ROOT/'dist/Open_Updates.vbs')
 shutil.copy2(ROOT/'migrations/002_accounts_services.sql',ROOT/'dist/002_accounts_services.sql')
+shutil.copy2(ROOT/'migrations/003_library_suite.sql',ROOT/'dist/003_library_suite.sql')
 archive=ROOT/f'dist/SMPCS_Library_Windows_v{VERSION}.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as package:
     for path in sorted(app_folder.rglob('*')):

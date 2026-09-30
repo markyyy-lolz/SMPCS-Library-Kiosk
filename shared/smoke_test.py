@@ -14,6 +14,11 @@ def run(app, result_path):
     assert not QPixmap(str(ROOT/'assets/school_logo.png')).isNull(), 'Missing school logo'
     assert read_settings()['repository']=='markyyy-lolz/SMPCS-Library-Kiosk', 'Missing update defaults'
     assert bcrypt.checkpw(b'test',bcrypt.hashpw(b'test',bcrypt.gensalt(rounds=4)))
+    import tempfile
+    from shared.suite import export_rows
+    with tempfile.TemporaryDirectory() as folder:
+        for ext in ('pdf','xlsx'):
+            path=Path(folder)/('smoke.'+ext);export_rows(str(path),['Field','Value'],[['Book','Build test']]);assert path.stat().st_size>0
     if __import__('os').name=='nt':
         assert SILENT_IMAGE_PRINT_AVAILABLE, 'Windows image-print dependencies missing'
     chooser=AppChooser(); chooser.show()

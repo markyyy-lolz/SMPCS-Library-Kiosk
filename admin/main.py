@@ -521,6 +521,9 @@ def msg(parent, title, text, kind="info"):
     box.setIcon({"info": QMessageBox.Icon.Information, "warning": QMessageBox.Icon.Warning,
                  "error": QMessageBox.Icon.Critical}.get(kind, QMessageBox.Icon.Information))
     box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    if kind=='error':
+        from shared.suite import add_copy_error
+        add_copy_error(box,text)
     box.setMinimumWidth(460)
     box.setStyleSheet(_box_style())
     return box.exec()
@@ -1313,6 +1316,7 @@ NAV_ITEMS = [
     ("approvals", "Borrow Approvals", "✅"),
     ("members", "Members", "👥"),
     ("accounts", "Accounts & Services", "⚙"),
+    ("services", "Library Services", "▦"),
     ("books", "Books", "📚"),
     ("analytics", "Book Analytics", "📊"),
     ("loans", "Loans", "🔄"),
@@ -1322,6 +1326,7 @@ NAV_ITEMS = [
     ("logs", "Audit / Logs", "🧾"),
 ]
 PAGE_META = {
+    "services": ("Library Services", "Requests, catalog, reports and administration tools."),
     "accounts": ("Accounts & Services", "Manage access, confirm returns and back up library records."),
     "attendance": ("Attendance history", "Search RFID visits, filter dates and export attendance records."),
     "dashboard": ("Library Dashboard", "A quick look at your library right now."),
@@ -1339,7 +1344,8 @@ PAGE_META = {
 class AdminWindow(QMainWindow, AdminFeatures):
     def __init__(self, api, user):
         super().__init__()
-        self.api = api
+        from shared.suite import StaffAPI
+        self.api = StaffAPI(api, user)
         self.user = user
         self._api_lock = threading.Lock()
         self._members_cache, self._books_cache, self._stations_cache = [], [], []
@@ -1382,6 +1388,8 @@ class AdminWindow(QMainWindow, AdminFeatures):
         self._refreshers = {}
         self.build_dashboard(); self.build_members(); self.build_books(); self.build_analytics()
         self.build_loans(); self.build_approvals(); self.build_stations(); self.build_print_logs(); self.build_logs(); self.build_attendance(); self.build_accounts()
+        from shared.suite_ui import build_center
+        build_center(self)
         self._clock_timer = QTimer(self)
         self._clock_timer.timeout.connect(self._tick_clock)
         self._clock_timer.start(1000)

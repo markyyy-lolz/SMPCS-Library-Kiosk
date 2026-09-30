@@ -1,3 +1,25 @@
+# v1.6.0 Library Suite setup
+
+Existing v1.5 users: run `migrations/003_library_suite.sql` once in your Supabase SQL Editor, then sign in again. This adds the new services and preserves existing records. Keep a database backup before changing your live schema. New installations use the base database, then 002, then 003, in that order. Do not run an older migration on top of the latest one.
+
+The Windows app is updated through **Updates / Repair → Check for updates → Restart & Update**. SQL migration is a separate, one-time database step. No database administrator secret is embedded in the app.
+
+## Where to find the new features
+
+- **Admin → Library Services**: notifications, request approvals, member tools, CSV/Excel import, book covers/shelves, announcements, maintenance, reports, receipts, inventory, backups and diagnostics.
+- **Admin → Accounts & Services → Staff accounts**: administrator, librarian or read-only assistant roles. Staff-management and station configuration require administrator access.
+- **Kiosk → Register here**: submits an approval request. After approving it, the librarian assigns a PIN under Member management → Access / PIN.
+- **Kiosk → My Account**: RFID + PIN, borrowing history, due-date reminders, catalog, reservations, renewals, feedback and request status.
+- **Updates**: live download progress, Restart later, version history and What's new. History dates show the first launch of each installed version.
+
+Reservation approval means the librarian has physically handed over the book; it creates a seven-day loan. Renewals take effect only after approval and are blocked when a reservation is waiting. Inventory tracks catalog records, not separate copies under the same RFID; manually verify multi-copy counts. Reports reject more than 10,000 results so you can narrow the dates rather than unknowingly export a partial report.
+
+Imports add new records only, with an all-or-nothing transaction. Download a template first. Keep identifiers as text in Excel to preserve leading zeros. Use Member management to select multiple members for promotion or graduate archiving. Archived members retain their history.
+
+Operational backups include members, books, loans, attendance, return requests and suite data. They exclude passwords, PINs, station credentials and schema. Restore merges records by ID, retains records created later, recalculates stock and signs out member sessions. A server recovery snapshot is created before each restore; seven are retained. Disable maintenance mode before restoring borrowing records. Use your database provider's backup tools for complete database disaster recovery.
+
+---
+
 # SMPCS Library 1.5.4
 
 1. Download the Windows ZIP and use **Extract All** once.

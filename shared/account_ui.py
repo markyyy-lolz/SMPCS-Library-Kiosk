@@ -28,11 +28,18 @@ def selected(t):
 def task(host,d,fn,ok):
     d.setEnabled(False)
     def success(value):
+        from PyQt6 import sip
+        if sip.isdeleted(d):return
         d.setEnabled(True)
         if d.isVisible():ok(value)
     def fail(exc):
+        from PyQt6 import sip
+        if sip.isdeleted(d):return
         d.setEnabled(True)
-        if d.isVisible():QMessageBox.warning(d,'Could not complete',str(exc))
+        if d.isVisible():
+            box=QMessageBox(QMessageBox.Icon.Warning,'Could not complete',str(exc),QMessageBox.StandardButton.Ok,d)
+            from shared.suite import add_copy_error
+            add_copy_error(box,str(exc));box.exec()
     if hasattr(host,'load'):host.load(fn,success,fail)
     else:host.run_async(fn,success,fail)
 
@@ -41,18 +48,23 @@ def edit_staff(host,refresh,row=None):
     for key,label in [('username','Username'),('full_name','Full name'),('password','New password (blank keeps current)')]:
         w=QLineEdit(str(row.get(key,'')));form.addRow(label,w);fields[key]=w
     fields['password'].setEchoMode(QLineEdit.EchoMode.Password)
-    role=QComboBox();role.addItems(['librarian','admin']);role.setCurrentText(row.get('role','librarian'));form.addRow('Role',role)
+    role=QComboBox();role.addItems(['assistant','librarian','admin']);role.setCurrentText(row.get('role','librarian'));form.addRow('Role',role)
     active=QCheckBox('Active');active.setChecked(row.get('active',True));form.addRow(active)
     lay.addWidget(QLabel('Passwords: 10+ characters, maximum 72 UTF-8 bytes.'))
     def save():
+        if not active.isChecked() and QMessageBox.question(d,'Disable staff account','Disable access for this staff account?')!=QMessageBox.StandardButton.Yes:return
         data={k:w.text() for k,w in fields.items()};data.update(id=row.get('id'),role=role.currentText(),active=active.isChecked())
         task(host,d,lambda:account(host.api,host.user,'staff_save',data),lambda _:(d.accept(),refresh()))
     lay.addStretch();actions=QHBoxLayout();actions.addStretch();lay.addLayout(actions);button(actions,'Cancel',d.reject);button(actions,'Save account',save);d.exec()
 
 def staff_accounts(host):
     d,lay=dialog(host,'Staff account management');lay.addWidget(QLabel('Administrators manage staff accounts and access.'))
-    t=table(lay,['Username','Full name','Role','Active'])
-    def refresh():task(host,d,lambda:account(host.api,host.user,'staff_list'),lambda rows:fill(t,rows,['username','full_name','role','active']))
+    search=QLineEdit();search.setPlaceholderText('Search username, name or role…');lay.addWidget(search)
+    t=table(lay,['Username','Full name','Role','Active']);cache=[]
+    def filtered():fill(t,[r for r in cache if search.text().casefold() in ' '.join(str(v) for v in r.values()).casefold()],['username','full_name','role','active'])
+    def loaded(rows):cache[:]=rows;filtered()
+    def refresh():task(host,d,lambda:account(host.api,host.user,'staff_list'),loaded)
+    search.textChanged.connect(filtered)
     actions=QHBoxLayout();lay.addLayout(actions)
     button(actions,'New staff account',lambda:edit_staff(host,refresh))
     button(actions,'Edit / reset password',lambda:edit_staff(host,refresh,selected(t)) if selected(t) else None)
@@ -69,6 +81,7 @@ def member_access(host):
     lay.addWidget(QLabel('RFID + PIN opens My Account. Disabling blocks new kiosk access.'))
     def save():
         if pin.text()!=confirm.text():QMessageBox.warning(d,'PIN','PINs do not match.');return
+        if not active.isChecked() and QMessageBox.question(d,'Deactivate account','Block this member from new kiosk access?')!=QMessageBox.StandardButton.Yes:return
         data={'id':row['id'],'active':active.isChecked(),'pin':pin.text()}
         task(host,d,lambda:account(host.api,host.user,'member_access',data),lambda _:(d.accept(),host.refresh_members()))
     lay.addStretch();actions=QHBoxLayout();actions.addStretch();lay.addLayout(actions);button(actions,'Cancel',d.reject);button(actions,'Save access',save);d.exec()
@@ -86,12 +99,8 @@ def return_requests(host):
     button(actions,'Book received — approve',lambda:review(True));button(actions,'Reject',lambda:review(False));button(actions,'Refresh',refresh);button(actions,'Close',d.reject);QTimer.singleShot(0,refresh);d.exec()
 
 def backup_dialog(host):
-    d,lay=dialog(host,'Operational backups');d.resize(660,390);label=QLabel('Daily backup runs while an administrator is signed in. Keeps the latest 7 snapshots.\nIncludes members, books, loans, attendance and return requests.\nPasswords, PINs, station secrets and database schema are excluded.\nRecovery requires a database administrator; this is not a full database backup.');label.setWordWrap(True);lay.addWidget(label)
-    location=QLabel('Automatic backup folder: '+str(APP_DIR/'backups'));location.setWordWrap(True);lay.addWidget(location);lay.addStretch()
-    def save():
-        folder=QFileDialog.getExistingDirectory(d,'Choose backup folder')
-        if folder:task(host,d,lambda:save_backup(host.api,host.user,folder),lambda path:QMessageBox.information(d,'Backup saved',path))
-    actions=QHBoxLayout();actions.addStretch();lay.addLayout(actions);button(actions,'Close',d.reject);button(actions,'Create backup in folder…',save);d.exec()
+    from shared.suite_ui import backups
+    return backups(host)
 
 ACCOUNT_STYLE = STYLE + """
 QDialog{background:#F1F5FA;}
@@ -171,6 +180,10 @@ class AccountDialog(QDialog):
         self.timer=QTimer(self);self.timer.setSingleShot(True);self.timer.timeout.connect(self.reject);self.timer.start(120000)
         QApplication.instance().focusChanged.connect(self.track_focus)
         self.finished.connect(self.cleanup)
+        from shared.kiosk_suite import attach_account, AccountTimeout
+        attach_account(self)
+        continue_button=button(footer,'Continue session',lambda:None)
+        self.privacy_timeout=AccountTimeout(self,timeout,continue_button)
 
     def pin_field(self,placeholder):
         w=QLineEdit();w.setPlaceholderText(placeholder);w.setEchoMode(QLineEdit.EchoMode.Password);w.setMaxLength(12);w.setMinimumHeight(40)
@@ -213,7 +226,8 @@ class AccountDialog(QDialog):
         self.identity.setText('Member '+str(m.get('member_no') or m.get('student_id') or '—')+'  •  '+' / '.join(str(m.get(k) or '—') for k in ('grade_level','section')))
         for row in self.loans:
             row['status_label']=str(row.get('status') or '').replace('_',' ').title()
-            row['overdue_label']='Please return' if row.get('overdue') else '—'
+            from shared.suite import due_hint
+            row['overdue_label']=due_hint(row.get('due_at'),row.get('status'))
             try:row['due_label']=datetime.fromisoformat(row['due_at'].replace('Z','+00:00')).astimezone(timezone(timedelta(hours=8))).strftime('%b %d, %Y')
             except (ValueError,TypeError,KeyError):row['due_label']=str(row.get('due_at') or '—')
         borrowed=sum(r.get('status')=='borrowed' for r in self.loans);overdue=sum(bool(r.get('overdue')) for r in self.loans)

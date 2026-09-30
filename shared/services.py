@@ -59,8 +59,12 @@ class Outbox:
 
 def save_backup(api,user,directory=None):
     folder=Path(directory or APP_DIR/'backups');folder.mkdir(parents=True,exist_ok=True)
-    data=account(api,user,'backup')
-    if not isinstance(data,dict) or data.get('format')!='SMPCS operational backup v1':raise ApiError('Invalid backup response')
+    from shared.suite import suite
+    try:data=suite(api,user,'backup')
+    except ApiError as exc:
+        if '003_library_suite' not in str(exc):raise
+        data=account(api,user,'backup')
+    if not isinstance(data,dict) or data.get('format') not in ('SMPCS operational backup v1','SMPCS operational backup v2'):raise ApiError('Invalid backup response')
     name='library-'+datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f')+'-'+uuid.uuid4().hex[:12]+'.json'
     path=folder/name;tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8');tmp.replace(path)
     for old in sorted(folder.glob('library-*.json'))[:-7]:old.unlink()

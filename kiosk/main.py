@@ -160,6 +160,9 @@ def kiosk_msg(parent, title, text, kind="info"):
         "question": QMessageBox.Icon.Question,
     }.get(kind, QMessageBox.Icon.Information))
     box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    if kind=='error':
+        from shared.suite import add_copy_error
+        add_copy_error(box,text)
     box.setMinimumWidth(560)
     box.setStyleSheet(
         f"""
@@ -2287,6 +2290,8 @@ class Kiosk(QMainWindow):
         self.heartbeat=QTimer(self); self.heartbeat.timeout.connect(self.heartbeat_fn); self.heartbeat.start(30000)
         self.rfid=RFIDCapture(self); self.rfid.tag.connect(self.handle_rfid)
         self.show_home(); QTimer.singleShot(300,self.verify_station)
+        from shared.kiosk_suite import KioskStatus
+        self.suite_status=KioskStatus(self)
 
     # ========================================================
     # BACKGROUND API CALLS (keeps every animation smooth)
@@ -2370,6 +2375,8 @@ class Kiosk(QMainWindow):
         try:
             login=AdminLogin(self.api,self)
             if login.exec()!=QDialog.DialogCode.Accepted: return
+            if login.user.get("role")!="admin":
+                kiosk_msg(self,"Settings","Administrator access required.","warning");return
             dialog=QDialog(self); dialog.setWindowTitle("Kiosk Settings")
             dialog.setMinimumWidth(500)
             dialog.setStyleSheet("QDialog{background:#F4F7FB;} QLabel,QCheckBox{color:#192B45;font-size:14px;} QPushButton{background:#192B45;color:white;border-radius:10px;padding:13px;font-weight:700;}")
@@ -2475,6 +2482,8 @@ class Kiosk(QMainWindow):
     # REGISTRATION
     # ========================================================
     def show_registration(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         self.member=None; self.mode="register"; self.pending_action=None; self.clear_content()
         page=QFrame(); page.setStyleSheet(f"QFrame{{background:{BACKGROUND};border:none;}}"); root=QVBoxLayout(page); root.setContentsMargins(0,0,0,0); root.setSpacing(12)
         hero=QFrame(); hero.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:24px;}}"); hl=QHBoxLayout(hero); hl.setContentsMargins(24,20,24,20); hl.setSpacing(20)
@@ -2530,6 +2539,7 @@ class Kiosk(QMainWindow):
         fade_in(self.reg_status,300); fade_in(self.reg_rfid,300)
 
     def submit_registration_request(self):
+        from shared.suite import station_suite
         values={"full_name":self.reg_name.text().strip(),"student_id":self.reg_student_id.text().strip(),"grade_level":self.reg_grade.text().strip(),"section":self.reg_section.text().strip(),"rfid":self.reg_rfid.text().strip(),"note":self.reg_note.text().strip()}
         missing=[k for k,v in (("Full name",values['full_name']),("Student ID",values['student_id']),("Grade / Level",values['grade_level']),("Section",values['section']),("School RFID",values['rfid'])) if not v]
         if missing: kiosk_msg(self,"Registration Incomplete","Please complete: "+", ".join(missing)+".","warning"); return
@@ -2537,8 +2547,8 @@ class Kiosk(QMainWindow):
         self.run_with_processing(
             "PREPARING YOUR REGISTRATION","Getting your details ready",
             ["Checking your details","Matching your school RFID","Preparing your slip for the librarian"],
-            fn=lambda: values,
-            on_ok=lambda v: self.show_result("PROCEED TO LIBRARIAN",f"{v['full_name']}\nStudent ID: {v['student_id']}   •   RFID: {v['rfid']}","REGISTRATION READY","Please show this screen to the librarian for verification and account activation.",BANNER_2,"!",20000),
+            fn=lambda: station_suite(self,"register",values),
+            on_ok=lambda v: self.show_result("REGISTRATION SUBMITTED",f"{values['full_name']}\nRequest: {v['id']}","AWAITING APPROVAL","The librarian received your request. Ask them to approve your account and assign a PIN.",BANNER_2,"!",20000),
             on_err=lambda exc: self.show_error("REGISTRATION FAILED",str(exc)),
             accent=BANNER_2,icon="doc",min_ms=1900,step_ms=650)
 
@@ -2549,6 +2559,8 @@ class Kiosk(QMainWindow):
     def print_from_home(self): self.find_member_from_home("print")
 
     def print_start(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         if self.busy or not self.member: return
         self.mode="print"; self.clear_content()
         member=self.member
@@ -2568,6 +2580,8 @@ class Kiosk(QMainWindow):
         self.run_async(lambda:self.api.rpc("library_log_print",payload), lambda _r:None, lambda _e:None)
 
     def find_member_from_home(self,action):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         self.mode="member"; self.pending_action=action
         if self.scan_panel is not None:
             info={"borrow":("BORROW A BOOK",BANNER_2),"return":("RETURN A BOOK",SECONDARY),"attendance":("ATTENDANCE",SUCCESS),"print":("PRINT A FILE",GOLD),"account":("MY ACCOUNT",BANNER_2)}
@@ -2597,8 +2611,10 @@ class Kiosk(QMainWindow):
             self._syncing=True
             def done(result):
                 self._syncing=False
-                if result['pending']:self.status.setText(f"{result['pending']} attendance scan(s) pending sync / review")
-            def fail(exc):self._syncing=False
+                self.status.setText(f"ONLINE • {result['pending']} attendance scan(s) pending sync / review" if result['pending'] else 'ONLINE • All attendance synced')
+            def fail(exc):
+                self._syncing=False
+                self.status.setText(f"OFFLINE • {len(self.outbox.rows(self.cfg['STATION_CODE']))} scan(s) waiting to sync")
             self.run_async(lambda:self.outbox.sync(self.api,self.cfg),done,fail)
 
     def set_online(self,online,text):
@@ -2620,6 +2636,8 @@ class Kiosk(QMainWindow):
         elif self.mode=="book_return": self.find_book_return(uid)
 
     def start_rfid_verification(self,uid):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         action=self.pending_action
         if action=='attendance':
             self.record_attendance_uid(uid);return
@@ -2726,13 +2744,21 @@ class Kiosk(QMainWindow):
             on_err=lambda exc:self.show_error('ATTENDANCE NEEDS REVIEW',str(exc)),accent=SUCCESS,icon='card',min_ms=1600,step_ms=600)
 
     def attendance(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         if self.member and not self.busy:self.record_attendance_uid(self.member.get('rfid_uid',''))
 
     # ========================================================
     # BOOK WORKFLOW
     # ========================================================
-    def borrow_start(self): self.mode="book_borrow"; self.show_book_screen("BORROW BOOK","Scan the book RFID or enter it manually.")
-    def return_start(self): self.mode="book_return"; self.show_book_screen("RETURN BOOK","Scan the book RFID or enter it manually.")
+    def borrow_start(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
+        self.mode="book_borrow"; self.show_book_screen("BORROW BOOK","Scan the book RFID or enter it manually.")
+    def return_start(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
+        self.mode="book_return"; self.show_book_screen("RETURN BOOK","Scan the book RFID or enter it manually.")
 
     def show_book_screen(self,title,subtitle):
         accent=SECONDARY if self.mode=="book_return" else BANNER_2
