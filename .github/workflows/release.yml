@@ -43,7 +43,6 @@ jobs:
           python scripts/test_database.py
           python scripts/test_suite_database.py
   release:
-    if: github.ref == 'refs/heads/main'
     needs: database-tests
     runs-on: windows-latest
     timeout-minutes: 20
@@ -74,7 +73,19 @@ jobs:
           python -m pip freeze | Out-File -Encoding utf8 dist/BUILD_DEPENDENCIES.txt
           python scripts/release_notes.py
           python scripts/release_checksums.py
+      - name: Save tested Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMPCS-Library-tested-build
+          path: |
+            dist/SMPCS_Library_Windows_*.zip
+            dist/SMPCS_Library_v*.zip
+            dist/003_library_suite.sql
+            dist/SHA256SUMS.txt
+            dist/SCAN_REPORT.txt
+          retention-days: 14
       - name: Publish new version
+        if: github.ref == 'refs/heads/main'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
