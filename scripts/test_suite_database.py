@@ -50,6 +50,9 @@ with psycopg.connect(os.environ['TEST_DATABASE_URL'],autocommit=True) as db:
     suite('review',{'id':feedback['id'],'decision':'resolved','note':'Done'})
     suite('incident',{'loan_id':str(loan),'type':'damaged','message':'Cover torn; assessed at desk'})
     assert suite('notifications',t=at)
+    assert suite('requests',{'kind':'feedback','status':'All'})
+    assert suite('my_requests',t=mt)
+    assert rpc('library_staff_rpc',token,'library_save_book',{'p_book_rfid':'OTHERBOOK','p_accession_no':'OTHERACC','p_title':'Other','p_author':'Author','p_category':'General','p_shelf':'B2','p_total_copies':1})
     suite('announce',{'title':'Notice','message':'Library event','expires_at':'2099-01-01T00:00:00Z'})
     assert station('status')['announcements']
     suite('maintenance',{'enabled':True,'message':'Reopens 2 PM'})

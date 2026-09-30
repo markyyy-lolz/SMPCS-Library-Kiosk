@@ -100,7 +100,7 @@ begin
  if p_action not in ('requests','notifications','reports','inventory_list','inventory_results','announcements') and u.role='assistant' then raise exception 'Assistant access is read-only'; end if;
  if p_action in ('import','promote','backup','restore','restore_points','maintenance','rfid_replace') and u.role<>'admin' then raise exception 'Administrator access required'; end if;
  if p_action='requests' then
- return (select coalesce(jsonb_agg(x order by x.created_at),'[]') from (select r.*,m.full_name,b.title from library_service_requests r left join library_members m on m.id=r.member_id left join library_books b on b.id=r.book_id where (coalesce(p_data->>'kind','All')='All' or r.kind=p_data->>'kind') and (coalesce(p_data->>'status','pending')='All' or r.status=p_data->>'status') order by r.created_at limit 1000) x);
+ return (select coalesce(jsonb_agg(x order by x.created_at),'[]') from (select r.*,coalesce(m.full_name,r.data->>'full_name') as full_name,b.title from library_service_requests r left join library_members m on m.id=r.member_id left join library_books b on b.id=r.book_id where (coalesce(p_data->>'kind','All')='All' or r.kind=p_data->>'kind') and (coalesce(p_data->>'status','pending')='All' or r.status=p_data->>'status') order by r.created_at limit 1000) x);
  elsif p_action='notifications' then
  result=jsonb_build_array(jsonb_build_object('kind','overdue','count',(select count(*) from library_loans where status='borrowed' and due_at<now())),jsonb_build_object('kind','returns','count',(select count(*) from library_return_requests where status='pending')));
  result=result||(select coalesce(jsonb_agg(x),'[]') from (select kind,count(*) as count from library_service_requests where status='pending' group by kind) x);
@@ -121,7 +121,7 @@ begin
  elsif req.kind='renewal' then
  perform 1 from library_books where id=req.book_id for update;
  if exists(select 1 from library_service_requests where book_id=req.book_id and kind='reservation' and status='pending') then raise exception 'Another member is waiting for this book'; end if;
- update library_loans set due_at=greatest(due_at,now())+make_interval(days=least(30,greatest(1,(req.data->>'days')::int))) where id=req.loan_id and status='borrowed';
+ update library_loans set due_at=greatest(due_at,now())+make_interval(days => least(30,greatest(1,(req.data->>'days')::int))) where id=req.loan_id and status='borrowed';
  if not found then raise exception 'Loan is no longer active'; end if;
  elsif req.kind='reservation' then
  perform 1 from library_books where id=req.book_id and available_copies>0 for update;
