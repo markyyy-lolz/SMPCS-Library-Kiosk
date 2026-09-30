@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = '1.6.0'
+VERSION = '1.7.0'
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = Path(os.getenv('APPDATA', str(Path.home()))) / 'SMPCS_Library' / 'updates.json'
 
@@ -91,6 +91,8 @@ def attach_updates(window, kiosk=False, public=False):
             self.percent=0;self.paused=[]
             self.poll=QTimer(self);self.poll.timeout.connect(self.finish);self.poll.start(150)
             self.schedule=QTimer(self);self.schedule.timeout.connect(self.automatic);self.schedule.start(6*60*60*1000)
+            from shared.update_schedule import attach
+            self.maintenance_schedule=attach(self,window,public)
             QTimer.singleShot(4000,self.automatic)
             if not kiosk and hasattr(window,'menuBar'):window.menuBar().addMenu('Updates').addAction('Update settings / Check now',self.show_settings)
 
@@ -140,6 +142,7 @@ def attach_updates(window, kiosk=False, public=False):
             self.download_btn=QPushButton('Download update');self.download_btn.clicked.connect(self.download_now);actions.addWidget(self.download_btn)
             self.install_btn=QPushButton('Restart & Update');self.install_btn.clicked.connect(self.install);actions.addWidget(self.install_btn)
             extra=QHBoxLayout();layout.addLayout(extra)
+            schedule_btn=QPushButton('Schedule installation');schedule_btn.clicked.connect(self.maintenance_schedule.settings);schedule_btn.setVisible(not public);extra.addWidget(schedule_btn)
             later=QPushButton('Restart later');later.clicked.connect(dlg.reject);extra.addWidget(later)
             history_btn=QPushButton('Update history');history_btn.clicked.connect(lambda:show_history(dlg));extra.addWidget(history_btn)
             note=QLabel('Your settings are preserved. The current version is kept as a backup.');note.setWordWrap(True);layout.addWidget(note)
@@ -225,7 +228,8 @@ def attach_updates(window, kiosk=False, public=False):
                     self.last=f"{result['tag']} downloaded and checksum verified. Click Restart & Update."
                     self.notify_status('Update ready — open Settings → Updates to restart.' if kiosk else self.last)
                     self.refresh()
-                    if not kiosk:self.show_settings()
+                    from shared.update_schedule import read as read_schedule
+                    if not kiosk and not read_schedule().get('enabled'):self.show_settings()
                 elif kind=='check':
                     self.release=result
                     if self.ready and self.ready["tag"]!=result["tag"]:self.ready=None
@@ -236,5 +240,6 @@ def attach_updates(window, kiosk=False, public=False):
                     if cfg['auto_download'] and (cfg['enabled'] or manual) and result.get('package_url'):self.download_now()
                     else:
                         self.notify_status(self.last)
-                        if not kiosk:self.show_settings()
+                        from shared.update_schedule import read as read_schedule
+                    if not kiosk and not read_schedule().get('enabled'):self.show_settings()
     controller=Controller();window.update_controller=controller;return controller

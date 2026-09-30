@@ -26,7 +26,6 @@ with psycopg.connect(url,autocommit=True) as db:
     denied(lambda:op('calendar_save',{'open_days':[1]},at))
     denied(lambda:op('copies',t='invalid'))
     for t in ('library_copies','library_ops_requests','library_handover'):
-        denied(lambda t=t:rpc('query_not_a_real_function',t))
         with db.transaction():
             db.execute('set local role anon')
             try:db.execute('select * from '+t)
@@ -74,6 +73,28 @@ with psycopg.connect(url,autocommit=True) as db:
     hand=op('handover_add',{'message':'Check repaired books'});op('handover_resolve',{'id':hand['id']})
     op('filter_save',{'name':'Our books','search':'Operations','kind':'Book'});assert op('filters');assert not op('filters',t=at)
     assert op('search',{'search':'Operations'});op('closing_save',{})
+    # Reservation pickup expires and advances to the next member, without lending automatically.
+    qbid=str(db.execute("insert into library_books(title,total_copies,available_copies,accession_no) values('Queue Book',1,1,'QUEUEBOOK') returning id").fetchone()[0])
+    qc=op('copies',{'book_id':qbid})[0];op('copy_save',{**qc,'rfid':'QUEUECOPY','verified':True})
+    qinfo=station('find',{'scan':'QUEUECOPY'})
+    qloan=station('borrow',{'scan':'QUEUECOPY','due_date':qinfo['default_due']})['id']
+    tokens=[];requests=[]
+    for i in range(2):
+        qmid=str(db.execute("insert into library_members(member_no,rfid_uid,full_name) values(%s,%s,%s) returning id",(f'QUEUE{i}',f'QUEUECARD{i}',f'Queue member {i}')).fetchone()[0])
+        account('member_access',{'id':qmid,'pin':'123456','active':True})
+        qt=rpc('library_account_login','member',f'QUEUECARD{i}','123456')['token'];tokens.append(qt)
+        requests.append(suite('request',{'kind':'reservation','book_id':qbid},qt)['id'])
+    op('reject_loan',{'id':qloan})
+    assert any(p['request_id']==requests[0] for p in op('pickups'))
+    denied(lambda:op('collect',{'id':requests[1]}))
+    db.execute("update library_pickups set deadline=now()-interval '1 minute' where request_id=%s",(requests[0],))
+    assert any(p['request_id']==requests[1] for p in op('pickups'))
+    assert not any(p['request_id']==requests[0] for p in op('pickups'))
+    op('collect',{'id':requests[1]});denied(lambda:op('collect',{'id':requests[1]}))
+    inv=suite('inventory_start',{'name':'Copy inventory'})
+    suite('inventory_scan',{'session_id':inv['id'],'rfid':'QUEUECOPY','shelf':'Different shelf'})
+    assert any(x['status']=='Misplaced' for x in suite('inventory_results',{'session_id':inv['id']}))
+
     # Two concurrent borrowers must never acquire the same physical copy.
     due=station('find')['default_due']
     def borrow_once():

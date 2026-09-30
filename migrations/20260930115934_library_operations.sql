@@ -86,6 +86,7 @@ declare m library_members; rule library_borrow_rules; c library_copies; cap date
  if c.id is null or c.book_id<>new.book_id or c.condition<>'good' or c.needs_verification then raise exception 'Copy is unavailable or needs librarian verification';end if;
  if exists(select 1 from library_loans where copy_id=c.id and status in ('borrowed','lost') and id<>new.id) then raise exception 'This copy is already on loan';end if;
  if exists(select 1 from library_pickups h join library_service_requests r on r.id=h.request_id where h.copy_id=c.id and h.state='ready' and r.member_id<>new.member_id) then raise exception 'Copy reserved for another member';end if;
+ if new.due_at is null then raise exception 'Return date required';end if;
  cap=library_private.open_date((now() at time zone 'Asia/Manila')::date+rule.loan_days);
  if (new.due_at at time zone 'Asia/Manila')::date>cap then raise exception 'Due date exceeds this member type borrowing rule';end if;
  if (new.due_at at time zone 'Asia/Manila')::date<=(now() at time zone 'Asia/Manila')::date then raise exception 'Choose a future return date';end if;
@@ -154,7 +155,7 @@ begin
  elsif p_action='clearance' and s.member_id is not null then mid=s.member_id;
  else
  if u.id is null then raise exception 'Staff access required';end if;
- if u.role='assistant' and p_action not in ('search','copies','copy_history','calendar','rules','clearance','requests','reading','occupancy','visits','handover','filters','filter_save','filter_delete','closing','duplicates','merge_preview','pickups') then raise exception 'Assistant access is read-only';end if;
+ if u.role='assistant' and p_action not in ('search','copies','copy_history','calendar','rules','clearance','requests','reading','occupancy','visits','handover','filters','filter_save','filter_delete','closing','closing_history','duplicates','merge_preview','pickups') then raise exception 'Assistant access is read-only';end if;
  if p_action in ('calendar_save','rule_save','merge','capacity','restore','backup') and u.role<>'admin' then raise exception 'Administrator access required';end if;
  mid=nullif(p_data->>'member_id','')::uuid;
  end if;
@@ -172,8 +173,9 @@ begin
  return (select coalesce(jsonb_agg(x order by x.borrowed_at desc),'[]') from (select l.*,m.full_name,m.member_no from library_loans l join library_members m on m.id=l.member_id where copy_id=(p_data->>'id')::uuid) x);
  elsif p_action='copy_save' then
  rid=nullif(p_data->>'id','')::uuid;b=(p_data->>'book_id')::uuid;
- if length(trim(coalesce(p_data->>'accession','')))<1 then raise exception 'Accession is required';end if;
+ if length(trim(coalesce(p_data->>'accession',''))) not between 1 and 80 then raise exception 'Accession is required';end if;
  if not exists(select 1 from library_books where id=b and active and merged_into is null) then raise exception 'Active book required';end if;
+ if exists(select 1 from library_copies cc where cc.id is distinct from rid and (cc.accession=nullif(trim(p_data->>'rfid'),'') or cc.rfid=trim(p_data->>'accession'))) then raise exception 'RFID conflicts with another accession, or accession conflicts with another RFID';end if;
  if rid is not null then
  select * into c from library_copies where id=rid for update;
  if not found or c.book_id<>b then raise exception 'Copy not found';end if;
@@ -251,6 +253,7 @@ begin
  if length(trim(coalesce(p_data->>'name','')))<1 then raise exception 'Filter name required';end if;
  insert into library_saved_filters(user_id,name,data) values(u.id,left(p_data->>'name',100),jsonb_build_object('search',left(coalesce(p_data->>'search',''),100),'kind',p_data->>'kind')) on conflict(user_id,name) do update set data=excluded.data;
  elsif p_action='filter_delete' then delete from library_saved_filters where id=(p_data->>'id')::uuid and user_id=u.id;
+ elsif p_action='closing_history' then return (select coalesce(jsonb_agg(x order by x.created_at desc),'[]') from (select * from library_closing_reports order by created_at desc limit 100) x);
  elsif p_action in ('closing','closing_save') then
  day=coalesce((p_data->>'day')::date,(now() at time zone 'Asia/Manila')::date);
  res=jsonb_build_object('day',day,'generated_at',now(),'borrowed',(select count(*) from library_loans where (borrowed_at at time zone 'Asia/Manila')::date=day),'returned',(select count(*) from library_loans where (returned_at at time zone 'Asia/Manila')::date=day),'visits',(select count(*) from library_attendance where action='IN' and (scanned_at at time zone 'Asia/Manila')::date=day),'overdue_now',(select count(*) from library_loans where status='borrowed' and due_at<now()),'pending_corrections',(select count(*) from library_ops_requests where kind in ('attendance','profile') and status='pending'),'open_handover_notes',(select count(*) from library_handover where resolved_at is null),'occupancy',library_operations(p_token,'occupancy','{}'));
@@ -326,6 +329,7 @@ begin
  insert into library_restore_points(snapshot) values(library_suite(p_token,'backup','{}'));
  -- Only the owner function can suspend these triggers, within this transaction.
  alter table library_books disable trigger ops_seed_book;
+ alter table library_loans disable trigger maintenance_guard;
  alter table library_loans disable trigger ops_loan_guard;
  alter table library_loans disable trigger ops_loan_stock;
  foreach tbl in array array['library_members','library_books','library_copies','library_loans','library_attendance','library_return_requests','library_service_requests','library_announcements','library_inventory_sessions','library_inventory_scans','library_retired_cards','library_borrow_rules','library_closed_dates','library_open_days','library_pickups','library_ops_requests','library_reading_lists','library_reading_items','library_class_visits','library_handover','library_saved_filters','library_closing_reports','library_copy_scans'] loop
@@ -337,6 +341,7 @@ begin
  execute format('insert into %I (%s) select %s from jsonb_populate_recordset(null::%I,$1) on conflict (%s) do update set %s',tbl,cols,cols,tbl,pk,ups) using snap->key;
  end loop;
  if exists(select 1 from library_loans l join library_copies c on c.id=l.copy_id where l.book_id<>c.book_id) then raise exception 'Backup copy and book mismatch';end if;
+ alter table library_loans enable trigger maintenance_guard;
  alter table library_books enable trigger ops_seed_book;alter table library_loans enable trigger ops_loan_guard;alter table library_loans enable trigger ops_loan_stock;
  for b in select id from library_books loop perform library_private.stock(b);end loop;
  delete from library_app_sessions where member_id is not null;

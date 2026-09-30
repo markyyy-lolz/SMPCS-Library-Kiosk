@@ -1,36 +1,43 @@
-"""Release notes bundled with the installed application for offline reading."""
-CURRENT_CHANGES = '''LIBRARY SUITE — v1.6.0
-SETUP REQUIRED
-• Apply migrations/003_library_suite.sql in Supabase SQL Editor after migration 002.
-• Sign in again after applying the migration. Existing records are retained.
+"""Release notes bundled for offline reading and the admin login update dialog."""
+CURRENT_CHANGES = '''LIBRARY OPERATIONS — v1.7.0
+ONE-TIME DATABASE SETUP
+• Apply migrations/20260930115934_library_operations.sql after migration 003.
+• Take a database backup first; update every kiosk and sign in again.
+• Verify generated physical copies in Library Services → Physical copies & repairs.
+  Existing loans are retained; generated accession/RFID assignments need a physical check.
+
+CIRCULATION
+• School calendar moves due dates to open days and blocks closed return dates.
+• Borrowing limits, loan duration and overdue blocking by member type.
+• Member clearance shows outstanding loans and unresolved incidents; export PDF.
+• Individual copies track accession, RFID, condition, loan history and inventory scans.
+• Reservations get pickup deadlines and advance to the next member after expiry.
+• Quarantine damaged copies during repair; return them to circulation after verification.
+• Print PDF shelf/spine, accession, QR and barcode labels for selected copies.
 
 ADMIN
-• Library Services center with clickable notifications and request queues.
-• Approve real kiosk registrations, book reservations and renewal requests.
-• Search member/staff accounts, reset PINs and confirm account deactivation.
-• Replace lost RFID cards, retire old cards, promote sections and archive graduates.
-• Preview CSV/Excel imports with duplicate validation and atomic saving.
-• Administrator, librarian and read-only assistant roles checked on the server.
-• Manage book covers, shelf locations, expiring announcements and maintenance mode.
-• Date-filtered attendance/loan/return/overdue reports with PDF, Excel and CSV export.
-• Printable borrowing receipt PDFs; lost/damaged book remarks and resolution tracking.
-• Inventory sessions show found, misplaced and unscanned catalog records.
-• Backup center with restore preview, confirmation and automatic recovery snapshots.
+• Search members, books, copies and loans from one place; save filters per staff account.
+• Preview duplicate member/book merges before typed confirmation; source records are archived.
+• Review requested book acquisitions through Under review, Ordered and Added.
+• Maintain subject/grade reading lists available in member accounts.
+• Attendance-based occupancy with capacity and stale time-in review.
+• Class visit bookings reject overlapping schedules and closed dates.
+• Attendance corrections require reasons; changes retain an audit record.
+• Member profile corrections need librarian approval.
+• Staff handover notes and completion tracking.
+• Daily closing summaries with PDF/Excel export and saved snapshots.
 
-MY ACCOUNT / KIOSK
-• Find books with covers, shelf details and copy availability.
-• Reserve unavailable books and track your queue position.
-• Request borrowing extensions; send feedback and view librarian responses.
-• Due-today, due-tomorrow and days-overdue reminders.
-• Visible privacy countdown with Continue session before automatic sign-out.
-• Announcements and maintenance notices; clearer attendance-sync status.
+MY ACCOUNT / KIOSK & UPDATES
+• My Account → Library services: acquisitions, profile/attendance corrections,
+  request status, reading lists and clearance.
+• Accessibility: larger text/buttons, high contrast and optional system voice guidance.
+• Scheduled installation of verified updates within an optional maintenance window.
+  Waits for 5 minutes idle, no active member, no dialog and no database work.
+• Blue theme, single Admin/Kiosk launcher and windowless Windows EXE retained.
 
-UPDATES & SUPPORT
-• Download percentage, Restart later and local installed-version history.
-• What's new still appears immediately after admin login.
-• Copy diagnostic/error reports without passwords, tokens or member records.
-
-NOTES
-• Inventory scans identify catalog records; verify multi-copy counts physically.
-• Backups restore operational records, not passwords, PINs or database schema.
-• Restores merge by record ID, retain newer records and recalculate available stock.'''
+BACKUPS
+• v3 operational backups include the new copy and operations tables.
+• Restore is for the same configured database; staff accounts, credentials and schema
+  remain outside the operational snapshot. Use a full database backup for disaster recovery.
+• Older operational snapshots must be restored on a pre-v1.7 database, then migrated.
+• Occupancy is an attendance estimate; review stale entries before relying on it.'''

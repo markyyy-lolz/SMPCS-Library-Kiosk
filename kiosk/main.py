@@ -2789,7 +2789,7 @@ class Kiosk(QMainWindow):
         self.run_with_processing(
             "READING YOUR BOOK","Looking up the book tag",
             ["Reading the book tag","Finding the book in the catalog"],
-            fn=lambda:self.api.rpc("library_find_book",{"p_rfid":uid}),
+            fn=lambda:self._operations("find",{"scan":uid,"member_rfid":self.member.get("rfid_uid","")}),
             on_ok=self._borrow_book_found,
             on_err=lambda exc:self.show_error("BORROW FAILED",str(exc)),
             accent=BANNER_2,icon="book",min_ms=1000,step_ms=520)
@@ -2798,7 +2798,7 @@ class Kiosk(QMainWindow):
         if not rows: self.show_error("BORROW FAILED","Book RFID is not registered."); return
         book=rows[0] if isinstance(rows,list) else rows; title=book.get("title","Book")
         self.busy=True
-        try: due=self.ask_return_date(title)
+        try: due=self.ask_return_date(title,book)
         finally: self.busy=False
         if due is None: self.borrow_start(); return
         days=QDate.currentDate().daysTo(due)
@@ -2807,15 +2807,19 @@ class Kiosk(QMainWindow):
         self.run_with_processing(
             "VERIFYING YOUR BOOK BORROW REQUEST","Checking your request",
             ["Reading the book tag","Checking that the book is available","Checking your library account","Sending your request to the librarian"],
-            fn=lambda:self.api.rpc("library_borrow",{"p_member_id":member["id"],"p_book_id":book["id"],"p_actor":self.cfg["STATION_CODE"],"p_due_days":days}),
+            fn=lambda:self._operations("borrow",{"member_rfid":member.get("rfid_uid",""),"scan":book["scan"],"due_date":due.toString("yyyy-MM-dd")}),
             on_ok=lambda _r:self.show_result("BORROW REQUEST",f"{title}\nReturn by {due_text}","PROCEED TO THE LIBRARIAN FOR VERIFICATION","Please bring the book and your school ID to the librarian before leaving.",BANNER_2,"!",8000),
             on_err=lambda exc:self.show_error("BORROW FAILED",str(exc)),
             accent=BANNER_2,icon="book",chip=f"“{title}”   •   Return by {due.toString('MMM d, yyyy')}",min_ms=2800,step_ms=800)
 
-    def ask_return_date(self,book_title):
+    def _operations(self,action,data):
+        from shared.operations import station_operations
+        return station_operations(self,action,data)
+
+    def ask_return_date(self,book_title,book=None):
         dlg=QDialog(self); dlg.setWindowTitle("Choose Return Date"); dlg.setModal(True); dlg.setMinimumSize(900,700); dlg.setStyleSheet(f"QDialog{{background:{BACKGROUND};}} QLabel{{color:{TEXT};background:transparent;}} QPushButton{{border-radius:14px;font-weight:800;}}")
         lay=QVBoxLayout(dlg); lay.setContentsMargins(28,24,28,26); lay.setSpacing(14); head=QFrame(); head.setStyleSheet(f"QFrame{{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 {BANNER_2},stop:1 {BANNER_1});border-radius:18px;}}"); hl=QVBoxLayout(head); h=QLabel("WHAT DAY DO YOU WANT TO SURRENDER THE BOOK?"); h.setAlignment(Qt.AlignmentFlag.AlignCenter); h.setStyleSheet("color:white;font-size:22px;font-weight:900;"); t=QLabel(f'"{book_title}"'); t.setAlignment(Qt.AlignmentFlag.AlignCenter); t.setStyleSheet("color:rgba(255,255,255,220);font-size:14px;font-weight:600;"); hl.addWidget(h); hl.addWidget(t); lay.addWidget(head)
-        selected=QDate.currentDate().addDays(7); chosen={"date":selected}; min_date=QDate.currentDate().addDays(1); visible={"date":QDate(selected.year(),selected.month(),1)}; sel=QLabel(); sel.setAlignment(Qt.AlignmentFlag.AlignCenter); sel.setStyleSheet(f"color:{ACCENT};font-size:18px;font-weight:900;"); lay.addWidget(sel)
+        book=book or {}; selected=QDate.fromString(book.get("default_due",""),"yyyy-MM-dd"); chosen={"date":selected}; min_date=QDate.fromString(book.get("today",""),"yyyy-MM-dd").addDays(1); visible={"date":QDate(selected.year(),selected.month(),1)}; sel=QLabel(); sel.setAlignment(Qt.AlignmentFlag.AlignCenter); sel.setStyleSheet(f"color:{ACCENT};font-size:18px;font-weight:900;"); lay.addWidget(sel)
         cal=QFrame(); cal.setStyleSheet(f"QFrame{{background:{WHITE};border:none;border-radius:20px;}}"); cl=QVBoxLayout(cal); nav=QHBoxLayout(); prev=QPushButton("‹"); nxt=QPushButton("›"); ml=QLabel(); ml.setAlignment(Qt.AlignmentFlag.AlignCenter); ml.setStyleSheet(f"color:{TEXT};font-size:22px;font-weight:900;"); prev.setFixedSize(58,52); nxt.setFixedSize(58,52); nav.addWidget(prev); nav.addWidget(ml,1); nav.addWidget(nxt); cl.addLayout(nav); wk=QGridLayout();
         for i,d in enumerate(("SUN","MON","TUE","WED","THU","FRI","SAT")):
             q=QLabel(d); q.setAlignment(Qt.AlignmentFlag.AlignCenter); q.setStyleSheet(f"color:{MUTED};font-size:12px;font-weight:900;"); wk.addWidget(q,0,i)
@@ -2826,7 +2830,7 @@ class Kiosk(QMainWindow):
                 if w: w.deleteLater()
             month=visible["date"]; ml.setText(month.toString("MMMM yyyy").upper()); start=QDate(month.year(),month.month(),1).dayOfWeek()%7
             for day in range(1,month.daysInMonth()+1):
-                d=QDate(month.year(),month.month(),day); r=(start+day-1)//7; c=(start+day-1)%7; b=QPushButton(str(day)); b.setMinimumHeight(58); b.setEnabled(d>=min_date)
+                d=QDate(month.year(),month.month(),day); r=(start+day-1)//7; c=(start+day-1)%7; b=QPushButton(str(day)); b.setMinimumHeight(58); b.setEnabled(d>=min_date and d<=selected and d.dayOfWeek()%7 in book.get("open_days",[]) and d.toString("yyyy-MM-dd") not in book.get("closed_dates",[]))
                 if d<min_date: b.setStyleSheet("QPushButton{background:#F1F2F4;color:#B8BDC6;border:none;}")
                 elif d==chosen["date"]: b.setStyleSheet(f"QPushButton{{background:{ACCENT};color:white;border:none;font-size:17px;}}")
                 else: b.setStyleSheet(f"QPushButton{{background:#FAFAFB;color:{TEXT};border:none;font-size:17px;}} QPushButton:hover{{background:{ACCENT_LIGHT};color:{ACCENT};}}")
@@ -2842,13 +2846,7 @@ class Kiosk(QMainWindow):
 
     # ---- return --------------------------------------------------------
     def _return_job(self,member,uid):
-        loans=self.api.select("library_loans","?select=id,book_id"+f"&member_id=eq.{member['id']}&status=eq.borrowed") or []; books=self.api.rpc("library_find_book",{"p_rfid":uid})
-        if not books: raise ApiError("Book RFID is not registered.")
-        book=books[0] if isinstance(books,list) else books; loan=next((x for x in loans if x.get("book_id")==book.get("id")),None)
-        if not loan: raise ApiError("This book is not currently borrowed by this member.")
-        from shared.services import station
-        station(self.api,self.cfg,"return_request",{"loan_id":loan["id"],"rfid":member.get("rfid_uid","")})
-        return book
+        return self._operations("return",{"member_rfid":member.get("rfid_uid",""),"scan":uid})
 
     def find_book_return(self,uid):
         if self.busy: return

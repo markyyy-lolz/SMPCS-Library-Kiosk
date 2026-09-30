@@ -54,7 +54,7 @@ def requests_dialog(host,initial='All'):
         if not r:return
         if r['kind'] in ('feedback','incident') and decision=='approved':decision='resolved'
         text='Confirm this request?'
-        if r['kind']=='reservation' and decision=='approved':text='Confirm the book has been handed to this member? This creates a 7-day loan.'
+        if r['kind']=='reservation' and decision=='approved':text='Confirm the book has been handed to this member? This creates a loan using the member’s borrowing rule.'
         if not confirm(d,text):return
         note,ok=QInputDialog.getText(d,'Review note','Remarks / assessment (optional):')
         if ok:call(host,d,'review',{'id':r['id'],'decision':decision,'note':note},lambda _:refresh())
@@ -255,7 +255,7 @@ def backups(host):
         try:
             if Path(path).stat().st_size>50_000_000:raise ValueError('Backup exceeds 50 MB.')
             snap=json.loads(Path(path).read_text(encoding='utf-8'))
-            if snap.get('format') not in ('SMPCS operational backup v1','SMPCS operational backup v2'):raise ValueError('Unsupported backup format.')
+            if snap.get('format') not in ('SMPCS operational backup v1','SMPCS operational backup v2','SMPCS operational backup v3'):raise ValueError('Unsupported backup format.')
             counts='\n'.join(f'{k}: {len(v)}' for k,v in snap.items() if isinstance(v,list))
         except Exception as exc:error(d,exc);return
         if confirm(d,'Review snapshot '+str(snap.get('created_at',''))+'\n'+counts+'\nContinue to restore confirmation?'):restore_payload({'snapshot':snap})
@@ -277,6 +277,8 @@ def build_center(host):
     page=QWidget();layout=QVBoxLayout(page);layout.setContentsMargins(0,0,0,0)
     scroll=QScrollArea();scroll.setWidgetResizable(True);body=QWidget();grid=QGridLayout(body);grid.setSpacing(16)
     items=[('Notifications','Overdue books and pending requests.',notifications,False),('Requests','Registrations, reservations, renewals and feedback.',requests_dialog,False),('Member management','Search, access, PINs, RFID replacement and school-year promotion.',member_tools,False),('Import records','Preview CSV / Excel and add members or books.',import_dialog,True),('Catalog details','Book covers and shelf locations.',book_details,False),('Announcements','Publish notices and control maintenance mode.',announcements,False),('Reports & receipts','Date filters, PDF / Excel, lost and damaged books.',reports,False),('Inventory','Record shelf scans and review missing or misplaced books.',inventory,False),('Backup & restore','Local snapshots and server recovery points.',backups,True),('Diagnostics','Copy an app report without credentials or member data.',diagnostic_dialog,False)]
+    from shared.operations_ui import add_operations
+    add_operations(host,items)
     for i,(title,description,fn,admin) in enumerate(items):
         card=Card(title,description);card.header.setStretch(0,1);card.header.setStretch(1,0);b=make_button('Open',lambda _=False,f=fn:f(host),height=40);b.setEnabled(not admin or host.user.get('role')=='admin');card.lay.addWidget(b);grid.addWidget(card,i//2,i%2)
     grid.setColumnStretch(0,1);grid.setColumnStretch(1,1);scroll.setWidget(body);layout.addWidget(scroll);host.add_page('services',page,lambda:None)
