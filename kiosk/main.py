@@ -2375,6 +2375,8 @@ class Kiosk(QMainWindow):
         try:
             login=AdminLogin(self.api,self)
             if login.exec()!=QDialog.DialogCode.Accepted: return
+            if login.user.get("role")!="admin":
+                kiosk_msg(self,"Settings","Administrator access required.","warning");return
             dialog=QDialog(self); dialog.setWindowTitle("Kiosk Settings")
             dialog.setMinimumWidth(500)
             dialog.setStyleSheet("QDialog{background:#F4F7FB;} QLabel,QCheckBox{color:#192B45;font-size:14px;} QPushButton{background:#192B45;color:white;border-radius:10px;padding:13px;font-weight:700;}")
@@ -2537,6 +2539,7 @@ class Kiosk(QMainWindow):
         fade_in(self.reg_status,300); fade_in(self.reg_rfid,300)
 
     def submit_registration_request(self):
+        from shared.suite import station_suite
         values={"full_name":self.reg_name.text().strip(),"student_id":self.reg_student_id.text().strip(),"grade_level":self.reg_grade.text().strip(),"section":self.reg_section.text().strip(),"rfid":self.reg_rfid.text().strip(),"note":self.reg_note.text().strip()}
         missing=[k for k,v in (("Full name",values['full_name']),("Student ID",values['student_id']),("Grade / Level",values['grade_level']),("Section",values['section']),("School RFID",values['rfid'])) if not v]
         if missing: kiosk_msg(self,"Registration Incomplete","Please complete: "+", ".join(missing)+".","warning"); return
@@ -2544,7 +2547,7 @@ class Kiosk(QMainWindow):
         self.run_with_processing(
             "PREPARING YOUR REGISTRATION","Getting your details ready",
             ["Checking your details","Matching your school RFID","Preparing your slip for the librarian"],
-            fn=lambda: __import__("shared.suite",fromlist=["station_suite"]).station_suite(self,"register",values),
+            fn=lambda: station_suite(self,"register",values),
             on_ok=lambda v: self.show_result("REGISTRATION SUBMITTED",f"{values['full_name']}\nRequest: {v['id']}","AWAITING APPROVAL","The librarian received your request. Ask them to approve your account and assign a PIN.",BANNER_2,"!",20000),
             on_err=lambda exc: self.show_error("REGISTRATION FAILED",str(exc)),
             accent=BANNER_2,icon="doc",min_ms=1900,step_ms=650)
@@ -2556,6 +2559,8 @@ class Kiosk(QMainWindow):
     def print_from_home(self): self.find_member_from_home("print")
 
     def print_start(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         if self.busy or not self.member: return
         self.mode="print"; self.clear_content()
         member=self.member
@@ -2739,13 +2744,21 @@ class Kiosk(QMainWindow):
             on_err=lambda exc:self.show_error('ATTENDANCE NEEDS REVIEW',str(exc)),accent=SUCCESS,icon='card',min_ms=1600,step_ms=600)
 
     def attendance(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
         if self.member and not self.busy:self.record_attendance_uid(self.member.get('rfid_uid',''))
 
     # ========================================================
     # BOOK WORKFLOW
     # ========================================================
-    def borrow_start(self): self.mode="book_borrow"; self.show_book_screen("BORROW BOOK","Scan the book RFID or enter it manually.")
-    def return_start(self): self.mode="book_return"; self.show_book_screen("RETURN BOOK","Scan the book RFID or enter it manually.")
+    def borrow_start(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
+        self.mode="book_borrow"; self.show_book_screen("BORROW BOOK","Scan the book RFID or enter it manually.")
+    def return_start(self):
+        from shared.kiosk_suite import maintenance_block
+        if maintenance_block(self):return
+        self.mode="book_return"; self.show_book_screen("RETURN BOOK","Scan the book RFID or enter it manually.")
 
     def show_book_screen(self,title,subtitle):
         accent=SECONDARY if self.mode=="book_return" else BANNER_2

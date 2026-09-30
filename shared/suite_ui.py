@@ -20,6 +20,7 @@ def ask(parent,title,fields,callback):
     d,lay=dialog(parent,title);d.resize(620,420);form=QFormLayout();lay.addLayout(form);widgets={}
     for key,label,initial in fields:
         w=QLineEdit(str(initial));form.addRow(label,w);widgets[key]=w
+        if key=='pin':w.setEchoMode(QLineEdit.EchoMode.Password)
     note=QLabel('Changes are checked by the server before saving.');note.setWordWrap(True);lay.addWidget(note);lay.addStretch()
     def save():
         callback({k:w.text().strip() for k,w in widgets.items()},d)
@@ -45,7 +46,7 @@ def requests_dialog(host,initial='All'):
     status=QComboBox();status.addItems(['pending','All','approved','rejected','resolved','cancelled']);filters.addWidget(kind);filters.addWidget(status);lay.addLayout(filters)
     t=table(lay,['Type','Member','Book','Status','Requested']);details=QPlainTextEdit();details.setReadOnly(True);details.setMaximumHeight(150);lay.addWidget(details)
     def show_details():
-        r=selected(t);details.setPlainText(json.dumps(r.get('data',{}),indent=2,ensure_ascii=False) if r else '')
+        r=selected(t);details.setPlainText('\n'.join(k.replace('_',' ').title()+': '+str(v) for k,v in r.get('data',{}).items() if k not in ('book_id','loan_id')) if r else '')
     t.itemSelectionChanged.connect(show_details)
     def refresh():call(host,d,'requests',{'kind':kind.currentText(),'status':status.currentText()},lambda rows:fill(t,rows,['kind','full_name','title','status','created_at']))
     def review(decision):
@@ -193,7 +194,7 @@ def reports(host):
     lay.addLayout(row);note=QLabel('Dates use Philippine time. Overdue reports filter by due date; returned reports by return date.');note.setWordWrap(True);lay.addWidget(note);t=table(lay,['Records'])
     def loaded(rows):
         if len(rows)>10000:error(d,'More than 10,000 rows. Narrow the dates for a complete report.');t.setRowCount(0);return
-        headers=list(rows[0]) if rows else ['No records'];t.setColumnCount(len(headers));t.setHorizontalHeaderLabels(headers);fill(t,rows,headers);note.setText(str(len(rows))+' records loaded (Philippine date range).')
+        headers=list(rows[0]) if rows else ['No records'];t.setColumnCount(len(headers));t.setHorizontalHeaderLabels([h.replace('_',' ').title() for h in headers]);fill(t,rows,headers);note.setText(str(len(rows))+' records loaded (Philippine date range).')
     def refresh():
         tz=timezone(timedelta(hours=8));lo=datetime.combine(start.date().toPyDate(),datetime.min.time(),tz);hi=datetime.combine(end.date().addDays(1).toPyDate(),datetime.min.time(),tz)
         call(host,d,'reports',{'kind':kind.currentText(),'start':lo.isoformat(),'end':hi.isoformat()},loaded)
@@ -277,7 +278,7 @@ def build_center(host):
     scroll=QScrollArea();scroll.setWidgetResizable(True);body=QWidget();grid=QGridLayout(body);grid.setSpacing(16)
     items=[('Notifications','Overdue books and pending requests.',notifications,False),('Requests','Registrations, reservations, renewals and feedback.',requests_dialog,False),('Member management','Search, access, PINs, RFID replacement and school-year promotion.',member_tools,False),('Import records','Preview CSV / Excel and add members or books.',import_dialog,True),('Catalog details','Book covers and shelf locations.',book_details,False),('Announcements','Publish notices and control maintenance mode.',announcements,False),('Reports & receipts','Date filters, PDF / Excel, lost and damaged books.',reports,False),('Inventory','Record shelf scans and review missing or misplaced books.',inventory,False),('Backup & restore','Local snapshots and server recovery points.',backups,True),('Diagnostics','Copy an app report without credentials or member data.',diagnostic_dialog,False)]
     for i,(title,description,fn,admin) in enumerate(items):
-        card=Card(title,description);b=make_button('Open',lambda _=False,f=fn:f(host),height=40);b.setEnabled(not admin or host.user.get('role')=='admin');card.lay.addWidget(b);grid.addWidget(card,i//2,i%2)
+        card=Card(title,description);card.header.setStretch(0,1);card.header.setStretch(1,0);b=make_button('Open',lambda _=False,f=fn:f(host),height=40);b.setEnabled(not admin or host.user.get('role')=='admin');card.lay.addWidget(b);grid.addWidget(card,i//2,i%2)
     grid.setColumnStretch(0,1);grid.setColumnStretch(1,1);scroll.setWidget(body);layout.addWidget(scroll);host.add_page('services',page,lambda:None)
     host.notification_button=QPushButton('Notifications');host.notification_button.clicked.connect(lambda:notifications(host));host.statusBar().addPermanentWidget(host.notification_button)
     timer=QTimer(host);timer.setInterval(60000);busy=[False]

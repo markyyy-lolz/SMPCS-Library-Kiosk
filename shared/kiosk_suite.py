@@ -35,7 +35,7 @@ def attach_account(dialog):
     def load_requests():
         if dialog.user:api('my_requests',{},lambda rows:fill(req_table,rows,['kind','title','status','queue_position']))
     def details_req():
-        r=selected(req_table);note.setPlainText(str((r or {}).get('data',{})))
+        r=selected(req_table);note.setPlainText('\n'.join(k.replace('_',' ').title()+': '+str(v) for k,v in (r or {}).get('data',{}).items() if k not in ('book_id','loan_id')))
     req_table.itemSelectionChanged.connect(details_req)
     def cancel():
         r=selected(req_table)

@@ -84,6 +84,6 @@ jobs:
             echo "Release v$VERSION already exists; nothing overwritten."
             exit 0
           fi
-          gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt dist/002_accounts_services.sql dist/Open_Updates.vbs \
+          gh release create "v$VERSION" "dist/SMPCS_Library_Windows_v$VERSION.zip" "dist/SMPCS_Library_v$VERSION.zip" dist/SHA256SUMS.txt dist/SCAN_REPORT.txt dist/BUILD_DEPENDENCIES.txt dist/002_accounts_services.sql dist/003_library_suite.sql dist/Open_Updates.vbs \
             --target "$GITHUB_SHA" --title "SMPCS Library v$VERSION — Windows EXE" \
             --notes-file dist/RELEASE_NOTES.md

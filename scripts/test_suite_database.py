@@ -49,6 +49,12 @@ with psycopg.connect(os.environ['TEST_DATABASE_URL'],autocommit=True) as db:
     feedback=suite('request',{'kind':'feedback','message':'Please fix the shelf label.'},mt)
     suite('review',{'id':feedback['id'],'decision':'resolved','note':'Done'})
     suite('incident',{'loan_id':str(loan),'type':'damaged','message':'Cover torn; assessed at desk'})
+    reservation2=suite('request',{'kind':'reservation','book_id':str(bid)},mt)
+    db.execute("update library_loans set status='returned',returned_at=now() where id=%s",(loan,))
+    db.execute('update library_books set available_copies=1 where id=%s',(bid,))
+    suite('review',{'id':reservation2['id'],'decision':'approved'})
+    denied(lambda:suite('review',{'id':reservation2['id'],'decision':'approved'}))
+    assert db.execute('select available_copies from library_books where id=%s',(bid,)).fetchone()[0]==0
     assert suite('notifications',t=at)
     assert suite('requests',{'kind':'feedback','status':'All'})
     assert suite('my_requests',t=mt)

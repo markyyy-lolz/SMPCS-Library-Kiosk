@@ -28,9 +28,13 @@ def selected(t):
 def task(host,d,fn,ok):
     d.setEnabled(False)
     def success(value):
+        from PyQt6 import sip
+        if sip.isdeleted(d):return
         d.setEnabled(True)
         if d.isVisible():ok(value)
     def fail(exc):
+        from PyQt6 import sip
+        if sip.isdeleted(d):return
         d.setEnabled(True)
         if d.isVisible():
             box=QMessageBox(QMessageBox.Icon.Warning,'Could not complete',str(exc),QMessageBox.StandardButton.Ok,d)
@@ -48,14 +52,19 @@ def edit_staff(host,refresh,row=None):
     active=QCheckBox('Active');active.setChecked(row.get('active',True));form.addRow(active)
     lay.addWidget(QLabel('Passwords: 10+ characters, maximum 72 UTF-8 bytes.'))
     def save():
+        if not active.isChecked() and QMessageBox.question(d,'Disable staff account','Disable access for this staff account?')!=QMessageBox.StandardButton.Yes:return
         data={k:w.text() for k,w in fields.items()};data.update(id=row.get('id'),role=role.currentText(),active=active.isChecked())
         task(host,d,lambda:account(host.api,host.user,'staff_save',data),lambda _:(d.accept(),refresh()))
     lay.addStretch();actions=QHBoxLayout();actions.addStretch();lay.addLayout(actions);button(actions,'Cancel',d.reject);button(actions,'Save account',save);d.exec()
 
 def staff_accounts(host):
     d,lay=dialog(host,'Staff account management');lay.addWidget(QLabel('Administrators manage staff accounts and access.'))
-    t=table(lay,['Username','Full name','Role','Active'])
-    def refresh():task(host,d,lambda:account(host.api,host.user,'staff_list'),lambda rows:fill(t,rows,['username','full_name','role','active']))
+    search=QLineEdit();search.setPlaceholderText('Search username, name or role…');lay.addWidget(search)
+    t=table(lay,['Username','Full name','Role','Active']);cache=[]
+    def filtered():fill(t,[r for r in cache if search.text().casefold() in ' '.join(str(v) for v in r.values()).casefold()],['username','full_name','role','active'])
+    def loaded(rows):cache[:]=rows;filtered()
+    def refresh():task(host,d,lambda:account(host.api,host.user,'staff_list'),loaded)
+    search.textChanged.connect(filtered)
     actions=QHBoxLayout();lay.addLayout(actions)
     button(actions,'New staff account',lambda:edit_staff(host,refresh))
     button(actions,'Edit / reset password',lambda:edit_staff(host,refresh,selected(t)) if selected(t) else None)
@@ -92,14 +101,6 @@ def return_requests(host):
 def backup_dialog(host):
     from shared.suite_ui import backups
     return backups(host)
-
-def legacy_backup_dialog(host):
-    d,lay=dialog(host,'Operational backups');d.resize(660,390);label=QLabel('Daily backup runs while an administrator is signed in. Keeps the latest 7 snapshots.\nIncludes members, books, loans, attendance and return requests.\nPasswords, PINs, station secrets and database schema are excluded.\nRecovery requires a database administrator; this is not a full database backup.');label.setWordWrap(True);lay.addWidget(label)
-    location=QLabel('Automatic backup folder: '+str(APP_DIR/'backups'));location.setWordWrap(True);lay.addWidget(location);lay.addStretch()
-    def save():
-        folder=QFileDialog.getExistingDirectory(d,'Choose backup folder')
-        if folder:task(host,d,lambda:save_backup(host.api,host.user,folder),lambda path:QMessageBox.information(d,'Backup saved',path))
-    actions=QHBoxLayout();actions.addStretch();lay.addLayout(actions);button(actions,'Close',d.reject);button(actions,'Create backup in folder…',save);d.exec()
 
 ACCOUNT_STYLE = STYLE + """
 QDialog{background:#F1F5FA;}

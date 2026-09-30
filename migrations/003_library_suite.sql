@@ -105,7 +105,7 @@ begin
  result=jsonb_build_array(jsonb_build_object('kind','overdue','count',(select count(*) from library_loans where status='borrowed' and due_at<now())),jsonb_build_object('kind','returns','count',(select count(*) from library_return_requests where status='pending')));
  result=result||(select coalesce(jsonb_agg(x),'[]') from (select kind,count(*) as count from library_service_requests where status='pending' group by kind) x);
  if to_regclass('public.library_loans') is not null then
- select count(*) into n from library_loans l where to_jsonb(l)->>'status' in ('pending','pending_verification') or to_jsonb(l)->>'verification_status'='pending';
+ select count(*) into n from library_loans l where to_jsonb(l)->>'status' in ('pending','pending_verification') or to_jsonb(l)->>'verification_status'='pending' or (to_jsonb(l) ? 'verified_at' and l.status='borrowed' and to_jsonb(l)->>'verified_at' is null);
  result=result||jsonb_build_array(jsonb_build_object('kind','borrowing','count',n));
  end if;
  return result;
@@ -128,7 +128,8 @@ begin
  if not found then raise exception 'No copy is available yet'; end if;
  if exists(select 1 from library_service_requests where book_id=req.book_id and kind='reservation' and status='pending' and (created_at,id)<(req.created_at,req.id)) then raise exception 'Serve the first member in the reservation queue'; end if;
  -- Librarian confirms the physical handover, creating one loan atomically.
- insert into library_loans(member_id,book_id,borrowed_by) values(req.member_id,req.book_id,u.username);
+ insert into library_loans(member_id,book_id,borrowed_by) values(req.member_id,req.book_id,u.username) returning id into lid;
+ if exists(select 1 from information_schema.columns where table_schema='public' and table_name='library_loans' and column_name='verified_at') then execute 'update library_loans set verified_at=now() where id=$1' using lid; end if;
  update library_books set available_copies=available_copies-1 where id=req.book_id;
  end if;
  end if;
@@ -275,6 +276,7 @@ begin
  if role_name is null or role_name='assistant' then raise exception 'Librarian access required'; end if;
  if p_name not in ('library_save_book','library_verify_loan','library_reject_loan','library_register_station') then raise exception 'Unsupported staff action'; end if;
  if p_name='library_register_station' and role_name<>'admin' then raise exception 'Administrator access required'; end if;
+ if p_args ? 'p_actor' then p_args=jsonb_set(p_args,'{p_actor}',to_jsonb((select username from library_users where id=s.user_id))); end if;
  for f in select p.* from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname=p_name loop
  if (select count(*) from jsonb_object_keys(p_args))=f.pronargs and not exists(select 1 from jsonb_object_keys(p_args) k where not k=any(f.proargnames)) then
  select string_agg(format('%I => ($1->>%L)::%s',f.proargnames[i],f.proargnames[i],format_type(f.proargtypes[i-1],null)),',') into args from generate_series(1,f.pronargs) i;

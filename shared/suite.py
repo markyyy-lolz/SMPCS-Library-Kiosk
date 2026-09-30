@@ -90,7 +90,7 @@ def export_rows(path, headers, rows, title='Library report'):
         from reportlab.lib import colors
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.lib.pagesizes import A4, landscape
-        style=getSampleStyleSheet();page=landscape(A4);doc=SimpleDocTemplate(path,pagesize=page,rightMargin=24,leftMargin=24,topMargin=24,bottomMargin=24)
+        style=getSampleStyleSheet();page=landscape(A4);doc=SimpleDocTemplate(str(path),pagesize=page,rightMargin=24,leftMargin=24,topMargin=24,bottomMargin=24)
         body=style['BodyText'];body.fontSize=8;body.leading=11
         values=[[Paragraph(escape(str(v or '')),body) for v in row] for row in [headers]+rows]
         table=Table(values,colWidths=[(page[0]-48)/len(headers)]*len(headers),repeatRows=1)
