@@ -1,13 +1,13 @@
 name: Build Windows EXE and publish release
 on:
   push:
-    branches: [main, feature/library-suite]
+    branches: [main, feature/library-suite, feature/library-operations]
     paths:
       - 'shared/updates.py'
       - 'shared/installer.py'
       - 'tests/**'
       - 'migrations/**'
-      - 'scripts/test_database.py'
+      - 'scripts/test*database.py'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 permissions:
@@ -42,6 +42,7 @@ jobs:
         run: |
           python scripts/test_database.py
           python scripts/test_suite_database.py
+          python scripts/test_operations_database.py
   release:
     needs: database-tests
     runs-on: windows-latest
