@@ -128,6 +128,7 @@ declare r record;c uuid;begin
  end loop;
 end $$;
 create or replace function library_operations(p_token text,p_action text,p_data jsonb default '{}') returns jsonb language plpgsql security definer set search_path=public,extensions,pg_temp as $$
+#variable_conflict use_column
 declare s library_app_sessions;u library_users;r library_ops_requests;c library_copies;b uuid;mid uuid;rid uuid;res jsonb;v text;q text;src uuid;dst uuid;preview jsonb;n int;cap int;old jsonb;day date;rr library_borrow_rules;req library_service_requests;pk library_pickups;cols text;ups text;tbl text;key text;snap jsonb;
 begin
  s=library_suite_session(p_token);select * into u from library_users where id=s.user_id;
@@ -302,7 +303,17 @@ begin
  s=library_suite_session(p_token);select * into u from library_users where id=s.user_id;
  perform pg_advisory_xact_lock(17000);
  perform library_private.queue();
- if p_action='backup' then
+ if p_action='inventory_scan' then
+ if u.id is null or u.role='assistant' then raise exception 'Librarian access required';end if;
+ perform 1 from library_inventory_sessions where id=(p_data->>'session_id')::uuid and completed_at is null for update;
+ if not found then raise exception 'Inventory session closed or missing';end if;
+ insert into library_copy_scans(session_id,copy_id,shelf) select (p_data->>'session_id')::uuid,id,p_data->>'shelf' from library_copies where rfid=p_data->>'rfid' or accession=p_data->>'rfid' on conflict(session_id,copy_id) do update set shelf=excluded.shelf,scanned_at=now();
+ if not found then raise exception 'Physical copy RFID/accession not registered';end if;
+ return '{"ok":true}';
+ elsif p_action='inventory_results' then
+ if u.id is null then raise exception 'Staff access required';end if;
+ return (select coalesce(jsonb_agg(x order by x.title),'[]') from (select c.id,b.title,c.accession book_rfid,c.shelf,sc.shelf observed_shelf,case when sc.copy_id is null then case when exists(select 1 from library_loans l where l.copy_id=c.id and status in ('borrowed','lost')) then 'On loan / unresolved' else 'Unscanned' end when coalesce(sc.shelf,'')<>coalesce(c.shelf,'') then 'Misplaced' else 'Found' end status from library_copies c join library_books b on b.id=c.book_id left join library_copy_scans sc on sc.copy_id=c.id and sc.session_id=(p_data->>'session_id')::uuid where c.condition<>'retired') x);
+ elsif p_action='backup' then
  if u.id is null or u.role<>'admin' then raise exception 'Administrator access required';end if;
  snap=library_suite_v3(p_token,'backup','{}');
  foreach tbl in array array['library_copies','library_borrow_rules','library_closed_dates','library_open_days','library_pickups','library_ops_requests','library_reading_lists','library_reading_items','library_class_visits','library_handover','library_saved_filters','library_closing_reports','library_copy_scans'] loop
@@ -410,5 +421,27 @@ end $$;
 revoke all on all functions in schema library_private from public,anon,authenticated;
 revoke all on function library_operations(text,text,jsonb),library_operations_station(text,text,text,jsonb),library_suite(text,text,jsonb),library_account_action(text,text,jsonb) from public;
 grant execute on function library_operations(text,text,jsonb),library_operations_station(text,text,text,jsonb),library_suite(text,text,jsonb),library_account_action(text,text,jsonb) to anon,authenticated;
+-- Preserve the staff entry point while replacing unsafe book-level counters.
+do $$ begin
+ if to_regprocedure('library_staff_rpc_v3(text,text,jsonb)') is null then alter function library_staff_rpc(text,text,jsonb) rename to library_staff_rpc_v3;end if;
+end $$;
+revoke all on function library_staff_rpc_v3(text,text,jsonb) from public,anon,authenticated;
+create or replace function library_staff_rpc(p_token text,p_name text,p_args jsonb default '{}') returns jsonb language plpgsql security definer set search_path=public,extensions,pg_temp as $$
+declare s library_app_sessions;u library_users;b library_books;res jsonb;begin
+ s=library_suite_session(p_token);select * into u from library_users where id=s.user_id;
+ if u.id is null or u.role='assistant' then raise exception 'Librarian access required';end if;
+ perform pg_advisory_xact_lock(17000);
+ if p_name in ('library_verify_loan','library_reject_loan') then return library_operations(p_token,case when p_name='library_verify_loan' then 'verify_loan' else 'reject_loan' end,jsonb_build_object('id',p_args->>'p_loan_id'));end if;
+ if p_name='library_save_book' then
+ select * into b from library_books where accession_no=p_args->>'p_accession_no';
+ if found and b.total_copies is distinct from (p_args->>'p_total_copies')::int then raise exception 'Manage stock in Library Services → Physical copies. Add or retire each physical copy there.';end if;
+ end if;
+ res=library_staff_rpc_v3(p_token,p_name,p_args);
+ if p_name='library_save_book' then select * into b from library_books where accession_no=p_args->>'p_accession_no';perform library_private.stock(b.id);end if;
+ return res;
+end $$;
+revoke all on function library_staff_rpc(text,text,jsonb) from public;
+grant execute on function library_staff_rpc(text,text,jsonb) to anon,authenticated;
+
 notify pgrst,'reload schema';
 commit;
