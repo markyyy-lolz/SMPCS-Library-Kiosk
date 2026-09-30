@@ -1,7 +1,7 @@
 name: Build Windows EXE and publish release
 on:
   push:
-    branches: [main]
+    branches: [main, feature/library-suite]
     paths:
       - 'shared/updates.py'
       - 'shared/installer.py'
@@ -39,8 +39,11 @@ jobs:
       - name: Verify database permissions and workflows
         env:
           TEST_DATABASE_URL: postgresql://postgres:test-only@localhost:5432/library_test
-        run: python scripts/test_database.py
+        run: |
+          python scripts/test_database.py
+          python scripts/test_suite_database.py
   release:
+    if: github.ref == 'refs/heads/main'
     needs: database-tests
     runs-on: windows-latest
     timeout-minutes: 20

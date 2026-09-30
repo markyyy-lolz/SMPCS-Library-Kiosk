@@ -79,6 +79,9 @@ def attach_updates(window, kiosk=False, public=False):
     from shared.installer import stage_release,prepare_helper
     from shared.theme import LIGHT_QSS
     from shared.changelog import CURRENT_CHANGES
+    from shared.update_history import record, show as show_history
+    try:record(VERSION,CURRENT_CHANGES)
+    except OSError:pass
 
     class Controller(QObject):
         def __init__(self):
@@ -136,6 +139,9 @@ def attach_updates(window, kiosk=False, public=False):
             self.check_btn=QPushButton('Check for updates' if public else 'Save and check now');self.check_btn.clicked.connect(self.manual);actions.addWidget(self.check_btn)
             self.download_btn=QPushButton('Download update');self.download_btn.clicked.connect(self.download_now);actions.addWidget(self.download_btn)
             self.install_btn=QPushButton('Restart & Update');self.install_btn.clicked.connect(self.install);actions.addWidget(self.install_btn)
+            extra=QHBoxLayout();layout.addLayout(extra)
+            later=QPushButton('Restart later');later.clicked.connect(dlg.reject);extra.addWidget(later)
+            history_btn=QPushButton('Update history');history_btn.clicked.connect(lambda:show_history(dlg));extra.addWidget(history_btn)
             note=QLabel('Your settings are preserved. The current version is kept as a backup.');note.setWordWrap(True);layout.addWidget(note)
             dlg.finished.connect(self.closed);self.refresh();dlg.show()
 
@@ -208,7 +214,8 @@ def attach_updates(window, kiosk=False, public=False):
                     window.close();QApplication.instance().quit();return
                 cfg=self.settings()
                 if kind=='progress':
-                    if cfg['repository']==repo:self.percent=result;self.refresh()
+                    if cfg['repository']==repo:
+                        self.percent=result;self.last=f'Downloading update: {result}%';self.refresh()
                     continue
                 self.busy=False
                 if cfg['repository']!=repo:self.refresh();continue

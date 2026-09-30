@@ -3,3 +3,7 @@ requests>=2.32,<3
 bcrypt>=4.2,<5
 python-dotenv>=1.0,<2
 psutil>=6,<8
+
+openpyxl>=3.1,<4
+reportlab>=4,<5
+Pillow>=10,<13
